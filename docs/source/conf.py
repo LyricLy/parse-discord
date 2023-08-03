@@ -6,7 +6,7 @@ sys.path.insert(1, "..")
 project = "parse-discord"
 copyright = "2023 LyricLy"
 author = "Christina Hanson"
-release = "0.1.0"
+release = "0.1.0a"
 
 html_theme = "furo"
 extensions = ["myst_parser", "sphinx_search.extension", "autodoc2", "sphinx.ext.viewcode", "sphinx.ext.intersphinx"]
