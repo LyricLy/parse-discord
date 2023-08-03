@@ -55,10 +55,10 @@ class InlineCode(Node):
         return f"InlineCode({self.content!r})"
 
 @dataclass(frozen=True, slots=True)
-class Codeblock:
+class Codeblock(Node):
     """A codeblock."""
 
-    language: str
+    language: str | None
     content: str
 
     def __repr__(self):

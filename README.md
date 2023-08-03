@@ -4,7 +4,7 @@ A parser for Discord's flavour of text markup that aims to be as accurate as pos
 ## Goals
 - Parsing message content as returned by Discord's API into a tree
 - Matching the behaviour of the desktop client as closely as possible, including edge cases
-- Supporting all constructs in plain message content, including emoji and mentions
+- Supporting all constructs rendered by the client in plain messages, including emoji, mentions and URLs
 
 ## Non-goals
 - Parsing markup besides that in message content from the API, like the highlighting seen in the client while typing a message

@@ -32,6 +32,7 @@ MAIN = regex.compile(r"""
 
 # backticks
 | (?<x>`{1,2})(?!`)(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
+| ```(?:(?<l>[a-zA-Z_\-+.0-9]*)\n)?(?<cb>.+?)```  # codeblock
 """, regex.X | regex.S | regex.POSIX | regex.VERSION1)
 
 
@@ -54,6 +55,8 @@ def _parse(s: str, /, *, at_line_start=True) -> Markup:
         else:
             if r := m.group("c"):
                 l.append(InlineCode(r))
+            elif r := m.group("cb"):
+                l.append(Codeblock(m.group("c") or None, r.strip()))
 
     _append_text(l, s[i:])
     return Markup(l)
