@@ -10,10 +10,9 @@ from .ast import *
 __all__ = ("parse",)
 
 MAIN = regex.compile(r"""
-# escape-aware definitions
+# utility definitions
 (?(DEFINE)
-    (?<ch>\\\p{Punct}|.)
-    (?<some>(?&ch)+?)
+    (?<some>(?:\\\p{Punct}|.)+?)
 )
 
 # skip escapes
@@ -33,6 +32,11 @@ MAIN = regex.compile(r"""
 # backticks
 | (?<x>`{1,2})(?!`)(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
 | ```(?:(?<l>[a-zA-Z_\-+.0-9]*)\n)?(?<cb>.+?)```  # codeblock
+
+# headers
+| ^\#\s+(?<h1>[^\n]*)\n?
+| ^\#\#\s+(?<h2>[^\n]*)\n?
+| ^\#\#\#\s+(?<h3>[^\n]*)\n?
 """, regex.X | regex.S | regex.POSIX | regex.VERSION1)
 
 
@@ -44,11 +48,11 @@ def _parse(s: str, /, *, at_line_start=True) -> Markup:
     i = 0
     l = []
 
-    for m in MAIN.finditer(s):
+    for m in MAIN.finditer(s) if at_line_start else MAIN.finditer("^" + s, 1):
         _append_text(l, s[i:m.start()])
         i = m.end()
 
-        for (g, ty) in [("i", Italic), ("b", Bold), ("u", Underline), ("s", Spoiler)]:
+        for g, ty in [("i", Italic), ("b", Bold), ("u", Underline), ("s", Spoiler), ("h1", Header1), ("h2", Header2), ("h3", Header3)]:
             if r := m.group(g):
                 l.append(ty(_parse(r)))
                 break
@@ -56,7 +60,7 @@ def _parse(s: str, /, *, at_line_start=True) -> Markup:
             if r := m.group("c"):
                 l.append(InlineCode(r))
             elif r := m.group("cb"):
-                l.append(Codeblock(m.group("c") or None, r.strip()))
+                l.append(Codeblock(m.group("l") or None, r.strip()))
 
     _append_text(l, s[i:])
     return Markup(l)

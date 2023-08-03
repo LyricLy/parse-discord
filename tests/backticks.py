@@ -17,7 +17,7 @@ class Backticks(unittest.TestCase):
         self.assertEqual(parse("` `````` `"), Markup([InlineCode(" `````` ")]))
 
     def test_inline_is_not_escaped(self):
-        self.assertEqual(parse("`\`"), Markup([InlineCode("\\")]))
+        self.assertEqual(parse(r"`\`"), Markup([InlineCode("\\")]))
 
     def test_block(self):
         self.assertEqual(parse("```foo```"), Markup([Codeblock(None, "foo")]))

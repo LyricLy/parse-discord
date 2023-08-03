@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-__all__ = ("Node", "Text", "Bold", "Italic", "Underline", "Spoiler", "InlineCode", "Codeblock", "Markup")
+__all__ = ("Node", "Text", "Bold", "Italic", "Underline", "Spoiler", "InlineCode", "Codeblock", "Header1", "Header2", "Header3", "Markup")
 
 
 class Node:
@@ -30,19 +30,31 @@ class Style(Node):
         return f"{type(self).__name__}({self.inner!r})"
 
 class Bold(Style):
-    """Bold text."""
+    """Bold text (`**foo**`)."""
     __slots__ = ()
 
 class Italic(Style):
-    """Italicized text."""
+    """Italicized text (`*foo*` or `_foo_`)."""
     __slots__ = ()
 
 class Underline(Style):
-    """Underlined text."""
+    """Underlined text (`__foo__`)."""
     __slots__ = ()
 
 class Spoiler(Style):
-    """A spoiler."""
+    """A spoiler (`||foo||`)."""
+    __slots__ = ()
+
+class Header1(Style):
+    """The largest header (`# foo`)."""
+    __slots__ = ()
+
+class Header2(Style):
+    """The middle-sized header (`## foo`)."""
+    __slots__ = ()
+
+class Header3(Style):
+    """The smallest header (`### foo`)."""
     __slots__ = ()
 
 @dataclass(frozen=True, slots=True)
