@@ -59,7 +59,7 @@ class Header3(Style):
 
 @dataclass(frozen=True, slots=True)
 class InlineCode(Node):
-    """Inline code."""
+    """Inline code (`` `foo` ``)."""
 
     content: str
 
@@ -68,7 +68,7 @@ class InlineCode(Node):
 
 @dataclass(frozen=True, slots=True)
 class Codeblock(Node):
-    """A codeblock."""
+    """A codeblock (```` ```foo``` ````)."""
 
     language: str | None
     content: str
