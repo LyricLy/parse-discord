@@ -26,6 +26,9 @@ MAIN = regex.compile(r"""
 # underscores, basically the same deal
 | _(?P<i>(?:\\\p{Punct}|__|[^_\\])+?)_(?!_)  # italics (doesn't have the same weird whitespace rules as asterisks)
 | __(?P<u>(?&some))__(?!_)  # underline
+
+# spoilers
+| \|\|(?P<s>(?&some))\|\|
 """, regex.X | regex.S | regex.POSIX | regex.VERSION1)
 
 
@@ -41,7 +44,7 @@ def _parse(s: str, /, *, at_line_start=True) -> Markup:
         _append_text(l, s[i:m.start()])
         i = m.end()
 
-        for (g, ty) in [("i", Italic), ("b", Bold), ("u", Underline)]:
+        for (g, ty) in [("i", Italic), ("b", Bold), ("u", Underline), ("s", Spoiler)]:
             if r := m.group(g):
                 l.append(ty(_parse(r)))
                 break

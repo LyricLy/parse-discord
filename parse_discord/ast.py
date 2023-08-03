@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-__all__ = ("Node", "Text", "Bold", "Italic", "Underline", "InlineCode", "Codeblock", "Markup")
+__all__ = ("Node", "Text", "Bold", "Italic", "Underline", "Spoiler", "InlineCode", "Codeblock", "Markup")
 
 
 class Node:

@@ -1,3 +1,4 @@
+from .core import *
 from .asterisks import *
 from .underscores import *
-from .core import *
+from .spoilers import *
