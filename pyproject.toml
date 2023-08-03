@@ -1,0 +1,17 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "parse-discord"
+authors = [{name = "Christina Hanson", email = "christinahansondesu@gmail.com"}]
+dynamic = ["version", "description"]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "regex>=2023.6.3",
+]
+
+[project.urls]
+Repository = "https://github.com/LyricLy/parse-discord"
+Documentation = "https://parse-discord.readthedocs.io/"
