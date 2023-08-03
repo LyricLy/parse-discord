@@ -17,19 +17,25 @@ MAIN = regex.compile(r"""
     (?P<some>(?&c)+?)
 )
 
+# skip escapes
+(?:\\.(*SKIP)(*F))?
+
 # asterisks
-  \*(?!\s)(?P<i>(?:\\\p{Punct}|\*\*|[^*])+?)(?<!\s{3}|\n\s*)\*(?!\*)   # italics
+  \*(?!\s)(?P<i>(?:\\\p{Punct}|\*\*|[^*\\])+?)(?<!\s{3}|\n\s*)\*(?!\*)   # italics
 | \*\*(?P<b>(?&some))\*\*(?!\*)  # bold
 """, regex.X | regex.S | regex.POSIX | regex.VERSION1)
 
+
+def _append_text(l, t):
+    if t:
+        l.append(Text(regex.sub(r"\\(.)", r"\1", t)))
 
 def _parse(s: str, /, *, at_line_start=True) -> Markup:
     i = 0
     l = []
 
     for m in MAIN.finditer(s):
-        if sl := s[i:m.start()]:
-            l.append(Text(sl))
+        _append_text(l, s[i:m.start()])
         i = m.end()
 
         if r := m.group("i"):
@@ -37,9 +43,7 @@ def _parse(s: str, /, *, at_line_start=True) -> Markup:
         if r := m.group("b"):
             l.append(Bold(_parse(r)))
 
-    if sl := s[i:]:
-        l.append(Text(sl))
-
+    _append_text(l, s[i:])
     return Markup(l)
 
 def parse(string: str, /) -> Markup:

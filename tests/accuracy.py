@@ -19,6 +19,12 @@ class Asterisks(unittest.TestCase):
     def test_bold(self):
         self.assertEqual(parse("**foo**"), Markup([Bold(Markup([Text("foo")]))]))
 
+    def test_escape_start(self):
+        self.assertEqual(parse("\\*foo*"), Markup([Text("*foo*")]))
+
+    def test_escape_end(self):
+        self.assertEqual(parse("*foo\\*"), Markup([Text("*foo*")]))
+
     def test_italic_in_bold(self):
         self.assertEqual(parse("***foo* bar** baz"), Markup([Bold(Markup([Italic(Markup([Text("foo")])), Text(" bar")])), Text(" baz")]))
 
