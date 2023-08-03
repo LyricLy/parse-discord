@@ -19,8 +19,17 @@ class Asterisks(unittest.TestCase):
     def test_bold(self):
         self.assertEqual(parse("**foo**"), Markup([Bold(Markup([Text("foo")]))]))
 
-    def test_regular(self):
+    def test_italic_in_bold(self):
         self.assertEqual(parse("***foo* bar** baz"), Markup([Bold(Markup([Italic(Markup([Text("foo")])), Text(" bar")])), Text(" baz")]))
+
+    def test_bold_in_italic(self):
+        self.assertEqual(parse("***foo** bar* baz"), Markup([Italic(Markup([Bold(Markup([Text("foo")])), Text(" bar")])), Text(" baz")]))
+
+    def test_cross_italic_first(self):
+        self.assertEqual(parse("*foo **bar* baz**"), Markup([Italic(Markup([Text("foo **bar")])), Text(" baz**")]))
+
+    def test_cross_bold_first(self):
+        self.assertEqual(parse("**foo *bar** baz*"), Markup([Bold(Markup([Text("foo *bar")])), Text(" baz*")]))
 
     def test_right_assoc(self):
         self.assertEqual(parse("**foo*"), Markup([Text("*"), Italic(Markup([Text("foo")]))]))

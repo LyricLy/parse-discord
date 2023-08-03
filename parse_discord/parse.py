@@ -20,7 +20,7 @@ MAIN = regex.compile(r"""
 # asterisks
   \*(?!\s)(?P<i>(?:\\\p{Punct}|\*\*|[^*])+?)(?<!\s{3}|\n\s*)\*(?!\*)   # italics
 | \*\*(?P<b>(?&some))\*\*(?!\*)  # bold
-""", regex.X | regex.S | regex.VERSION1)
+""", regex.X | regex.S | regex.POSIX | regex.VERSION1)
 
 
 def _parse(s: str, /, *, at_line_start=True) -> Markup:
