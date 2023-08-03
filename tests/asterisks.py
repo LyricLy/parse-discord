@@ -2,17 +2,10 @@ import unittest
 
 from parse_discord import *
 
-
-def depth_of_insanity(m):
-    if not isinstance(m, (Italic, Bold)):
-        return 0
-    return 1 + depth_of_insanity(m.inner.nodes[0])
+from .utils import depth_of_insanity
 
 
 class Asterisks(unittest.TestCase):
-    def test_text(self):
-        self.assertEqual(parse("foo"), Markup([Text("foo")]))
-
     def test_italics(self):
         self.assertEqual(parse("*foo*"), Markup([Italic(Markup([Text("foo")]))]))
 
@@ -20,10 +13,13 @@ class Asterisks(unittest.TestCase):
         self.assertEqual(parse("**foo**"), Markup([Bold(Markup([Text("foo")]))]))
 
     def test_escape_start(self):
-        self.assertEqual(parse("\\*foo*"), Markup([Text("*foo*")]))
+        self.assertEqual(parse(r"\*foo*"), Markup([Text("*foo*")]))
+
+    def test_escape_middle(self):
+        self.assertEqual(parse(r"*foo\*bar*"), Markup([Italic(Markup([Text("foo*bar")]))]))
 
     def test_escape_end(self):
-        self.assertEqual(parse("*foo\\*"), Markup([Text("*foo*")]))
+        self.assertEqual(parse(r"*foo\*"), Markup([Text("*foo*")]))
 
     def test_italic_in_bold(self):
         self.assertEqual(parse("***foo* bar** baz"), Markup([Bold(Markup([Italic(Markup([Text("foo")])), Text(" bar")])), Text(" baz")]))
@@ -59,3 +55,11 @@ class Asterisks(unittest.TestCase):
             self.assertEqual(depth_of_insanity(p.nodes[0]), nth*2+(part//2%2) if part%2 else nth)
             self.assertIsInstance(p.nodes[0], (Text, Italic if part%2 else Bold))
             
+    def test_ws(self):
+        self.assertEqual(parse("a * *"), Markup([Text("a * *")]))
+        self.assertEqual(parse("a * b*"), Markup([Text("a * b*")]))
+        self.assertEqual(parse("a *b  *"), Markup([Text("a "), Italic(Markup([Text("b  ")]))]))
+        # never change, discord
+        self.assertEqual(parse("a *b   *"), Markup([Text("a *b   *")]))
+
+        self.assertEqual(parse("** **"), Markup([Bold(Markup([Text(" ")]))]))
