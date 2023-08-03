@@ -12,23 +12,26 @@ __all__ = ("parse",)
 MAIN = regex.compile(r"""
 # escape-aware definitions
 (?(DEFINE)
-    (?P<c>\\\p{Punct}|.)
-    (?P<some>(?&c)+?)
+    (?<ch>\\\p{Punct}|.)
+    (?<some>(?&ch)+?)
 )
 
 # skip escapes
 (?:\\.(*SKIP)(*F))?
 
 # asterisks
-  \*(?!\s)(?P<i>(?:\\\p{Punct}|\*\*|[^*\\])+?)(?<!\s{3}|\n\s*)\*(?!\*)   # italics
-| \*\*(?P<b>(?&some))\*\*(?!\*)  # bold
+  \*(?!\s)(?<i>(?:\\\p{Punct}|\*\*|[^*\\])+?)(?<!\s{3}|\n\s*)\*(?!\*)   # italics
+| \*\*(?<b>(?&some))\*\*(?!\*)  # bold
 
 # underscores, basically the same deal
-| _(?P<i>(?:\\\p{Punct}|__|[^_\\])+?)_(?!_)  # italics (doesn't have the same weird whitespace rules as asterisks)
-| __(?P<u>(?&some))__(?!_)  # underline
+| _(?<i>(?:\\\p{Punct}|__|[^_\\])+?)_(?!_)  # italics (doesn't have the same weird whitespace rules as asterisks)
+| __(?<u>(?&some))__(?!_)  # underline
 
 # spoilers
-| \|\|(?P<s>(?&some))\|\|
+| \|\|(?<s>(?&some))\|\|
+
+# backticks
+| (?<x>`{1,2})(?!`)(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
 """, regex.X | regex.S | regex.POSIX | regex.VERSION1)
 
 
@@ -48,6 +51,9 @@ def _parse(s: str, /, *, at_line_start=True) -> Markup:
             if r := m.group(g):
                 l.append(ty(_parse(r)))
                 break
+        else:
+            if r := m.group("c"):
+                l.append(InlineCode(r))
 
     _append_text(l, s[i:])
     return Markup(l)

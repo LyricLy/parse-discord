@@ -41,13 +41,18 @@ class Underline(Style):
     """Underlined text."""
     __slots__ = ()
 
-class InlineCode(Style):
-    """Inline code."""
-    __slots__ = ()
-
 class Spoiler(Style):
     """A spoiler."""
     __slots__ = ()
+
+@dataclass(frozen=True, slots=True)
+class InlineCode(Node):
+    """Inline code."""
+
+    content: str
+
+    def __repr__(self):
+        return f"InlineCode({self.content!r})"
 
 @dataclass(frozen=True, slots=True)
 class Codeblock:
