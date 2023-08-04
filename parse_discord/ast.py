@@ -10,6 +10,7 @@ __all__ = ("Node", "Text", "Bold", "Italic", "Underline", "Spoiler", "InlineCode
 
 class Node:
     """A base class for all AST nodes."""
+    __slots__ = ()
 
 @dataclass(frozen=True, slots=True)
 class Text(Node):
