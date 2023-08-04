@@ -27,3 +27,9 @@ class Headers(unittest.TestCase):
 
     def test_even_through_asterisks(self):
         self.assertEqual(parse(" *# foo*"), Markup([Text(" "), Italic(Markup([Text("# foo")]))]))
+
+    def test_leading_hash(self):
+        self.assertEqual(parse("# # a"), Markup([Text("# # a")]))
+
+    def test_strips(self):
+        self.assertEqual(parse("#    a #   ####   "), Markup([Header1(Markup([Text("a #")]))]))
