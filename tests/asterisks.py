@@ -36,6 +36,9 @@ class Asterisks(unittest.TestCase):
     def test_right_assoc(self):
         self.assertEqual(parse("**foo*"), Markup([Text("*"), Italic(Markup([Text("foo")]))]))
 
+    def test_newline_breaker(self):
+        self.assertEqual(parse("*foo\n*"), Markup([Text("*foo\n*")]))
+
     def test_n_on_right(self):
         for i in range(20):
             p = parse(f"*foo****{'*'*i}")
