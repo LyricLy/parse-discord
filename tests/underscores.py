@@ -16,7 +16,13 @@ class Underscores(unittest.TestCase):
         self.assertEqual(parse(r"\_foo_"), Markup([Text("_foo_")]))
 
     def test_escape_middle(self):
-        self.assertEqual(parse(r"_foo\_bar_"), Markup([Italic(Markup([Text("foo_bar")]))]))
+        self.assertEqual(parse(r"_a\_\\\_\\_"), Markup([Italic(Markup([Text("a_\\_\\")]))]))
+
+    def test_invalid_escape_middle(self):
+        self.assertEqual(parse(r"_\a_"), Markup([Italic(Markup([Text(r"\a")]))]))
+
+    def test_escape_scourge(self):
+        self.assertEqual(parse(r"__\__"), Markup([Text("_"), Italic(Markup([Text("_")]))]))
 
     def test_escape_end(self):
         self.assertEqual(parse(r"_foo\_"), Markup([Text("_foo_")]))

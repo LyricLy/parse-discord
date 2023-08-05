@@ -15,3 +15,6 @@ class Core(unittest.TestCase):
 
     def test_strip_trailing_ws(self):
         self.assertEqual(parse("foo   \nbar"), Markup([Text("foo\nbar")]))
+
+    def test_self_escape(self):
+        self.assertEqual(parse(r"\\\*"), Markup([Text(r"\*")]))

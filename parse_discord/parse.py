@@ -15,22 +15,23 @@ __all__ = ("parse",)
 main_source = r"""
 # utility definitions
 (?(DEFINE)
-    (?<some>(?:\\\p{Punct}|.)+?)
+    (?<e>\\.)
+    (?<some>(?:(?&e)|[^\\])+?)
 )
 
 # skip escapes
 (?:\\.(*SKIP)(*F))?
 
 # asterisks
-  \*(?!\s)(?<i>(?:\\\p{Punct}|\*\*|[^*\\])+?)(?<!\s)\ {0,2}\*(?!\*)   # italics
+  \*(?!\s)(?<i>(?:(?&e)|\*\*|[^*\\])+?)(?<!\s)\ {0,2}\*(?!\*)   # italics
 | \*\*(?<b>(?&some))\*\*(?!\*)  # bold
 
 # underscores, basically the same deal
-| _(?<i>(?:\\\p{Punct}|__|[^_\\])+?)_(?!_)  # italics (doesn't have the same weird whitespace rules as asterisks)
+| _(?<i>(?:(?&e)|__|[^_\\])+?)_(?!_)  # italics (doesn't have the same weird whitespace rules as asterisks)
 | __(?<u>(?&some))__(?!_)  # underline
 
 # spoilers
-| \|\|(?<s>(?&some))\|\|
+| \|\|(?<s>.+?)\|\|
 
 # backticks
 | (?<x>`{1,2})(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
@@ -38,6 +39,13 @@ main_source = r"""
 
 # headers
 | ^(?<ty>\#{1,3})\s+(?!\#)(?<h>[^\n]*)\n?
+
+# mentions
+| <@!?(?<um>[0-9]+)>
+| <\#(?<cm>[0-9]+)>
+| <@&(?<rm>[0-9]+)>
+| (?<ev>@everyone)
+| (?<he>@here)
 
 # quotes
 %s
@@ -82,10 +90,11 @@ class Context:
         self.line_start = line_start
         self.is_quote = is_quote
 
-    def update(self, s: str, i: int, *, is_quote: bool = False) -> Context:
+    def update(self, s: str, m: regex.Match, *, is_quote: bool = False) -> Context:
         # once in a quote, always in a quote
         is_quote = self.is_quote or is_quote
         line_start = LineStart.NOTHING
+        i = m.start()
         while True:
             i -= 1
             if i < 0 or s[i] == "\n":
@@ -111,37 +120,49 @@ class Context:
 
 def append_text(l: list[Node], t: str):
     if t:
-        l.append(Text(regex.sub(r"\\(\p{Punct})| +(?=\n)", r"\1", t)))
+        l.append(Text(regex.sub(r"\\([<>\p{Punct}])| +(?=\n)", r"\1", t)))
 
-def _parse(s: str, context: Context = Context(), /) -> Generator[tuple[str, Context], Markup | None, Markup]:
+def resolve_match(m: regex.Match, ctx: Context, s: str) -> Generator[tuple[str, Context], Markup, Node]:
+    for g, ty in [("i", Italic), ("b", Bold), ("u", Underline), ("s", Spoiler)]:
+        if r := m.group(g):
+            return ty((yield r, ctx.update(s, m)))
+
+    for g, ty in [("um", UserMention), ("cm", ChannelMention), ("rm", RoleMention)]:
+        if r := m.group(g):
+            return ty(int(r))
+
+    for g, ty in [("ev", Everyone), ("he", Here)]:
+        if r := m.group(g):
+            return ty()
+
+    if r := m.group("c"):
+        s = r.strip(" ")
+        if s[0] == "`":
+            r = r.removeprefix(" ")
+        if s[-1] == "`":
+            r = r.removesuffix(" ")
+        return InlineCode(r)
+
+    elif r := m.group("cb"):
+        return Codeblock(m.group("l") or None, r.strip())
+
+    elif r := m.group("h"):
+        ty = [Header1, Header2, Header3][len(m.group("ty"))-1]
+        title = r.rstrip().rstrip("#").rstrip()
+        return ty((yield title, ctx.update(s, m)))
+
+    elif r := m.captures("q"):
+        return Quote((yield "\n".join(r).rstrip(" "), ctx.update(s, m, is_quote=True)))
+
+    assert False
+
+def _parse(s: str, ctx: Context = Context(), /) -> Generator[tuple[str, Context], Markup | None, Markup]:
     l = []
-
-    it, s, i = context.parse(s)
+    it, s, i = ctx.parse(s)
     for m in it:
         append_text(l, s[i:m.start()])
         i = m.end()
-
-        for g, ty in [("i", Italic), ("b", Bold), ("u", Underline), ("s", Spoiler)]:
-            if r := m.group(g):
-                l.append(ty((yield r, context.update(s, m.start()))))
-                break
-        else:
-            if r := m.group("c"):
-                s = r.strip(" ")
-                if s[0] == "`":
-                    r = r.removeprefix(" ")
-                if s[-1] == "`":
-                    r = r.removesuffix(" ")
-                l.append(InlineCode(r))
-            elif r := m.group("cb"):
-                l.append(Codeblock(m.group("l") or None, r.strip()))
-            elif r := m.group("h"):
-                ty = [Header1, Header2, Header3][len(m.group("ty"))-1]
-                title = r.rstrip().rstrip("#").rstrip()
-                l.append(ty((yield title, context.update(s, m.start()))))
-            elif r := m.captures("q"):
-                l.append(Quote((yield "\n".join(r).rstrip(" "), context.update(s, m.start(), is_quote=True))))
-
+        l.append((yield from resolve_match(m, ctx, s)))
     append_text(l, s[i:])
     return Markup(l)
 

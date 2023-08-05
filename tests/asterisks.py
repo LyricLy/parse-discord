@@ -16,7 +16,13 @@ class Asterisks(unittest.TestCase):
         self.assertEqual(parse(r"\*foo*"), Markup([Text("*foo*")]))
 
     def test_escape_middle(self):
-        self.assertEqual(parse(r"*foo\*bar*"), Markup([Italic(Markup([Text("foo*bar")]))]))
+        self.assertEqual(parse(r"*a\*\\\*\\*"), Markup([Italic(Markup([Text("a*\\*\\")]))]))
+
+    def test_invalid_escape_middle(self):
+        self.assertEqual(parse(r"*\a*"), Markup([Italic(Markup([Text(r"\a")]))]))
+
+    def test_escape_scourge(self):
+        self.assertEqual(parse(r"**\**"), Markup([Text("*"), Italic(Markup([Text("*")]))]))
 
     def test_escape_end(self):
         self.assertEqual(parse(r"*foo\*"), Markup([Text("*foo*")]))

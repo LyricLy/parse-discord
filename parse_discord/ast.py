@@ -5,7 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-__all__ = ("Node", "Text", "Bold", "Italic", "Underline", "Spoiler", "Quote", "InlineCode", "Codeblock", "Header1", "Header2", "Header3", "Markup")
+__all__ = (
+    "Node", "Markup",
+    "Text", "Bold", "Italic", "Underline", "Spoiler",
+    "Quote", "InlineCode", "Codeblock", 
+    "Header1", "Header2", "Header3", 
+    "RoleMention", "ChannelMention", "UserMention",
+    "Everyone", "Here",
+)
 
 
 class Node:
@@ -114,6 +121,61 @@ class Codeblock(Node):
 
     def __repr__(self):
         return f"Codeblock({self.language!r}, {self.content!r})"
+
+@dataclass(frozen=True, slots=True)
+class Mention(Node):
+    """Base class for mentions."""
+
+    id: int
+
+    def __repr__(self):
+        return f"{type(self)}({self.id!r})"
+
+class UserMention(Mention):
+    """A mention of a user (`<@319753218592866315>`).
+
+    Note that only IDs are included in message content, not the name associated with the mention, so that is the only field this library can provide.
+
+    This represents the *rendering* of the text, not whether or not it actually pings. These are not the same in all cases: `\<@319753218592866315>` will
+    prevent the ping from being rendered, but the message will still ping.
+
+    :ivar int id: The user ID.
+    """
+    __slots__ = ()
+
+class ChannelMention(Mention):
+    """A mention of a channel (`<#319753218592866315>`).
+
+    Note that only IDs are included in message content, not the name associated with the mention, so that is the only field this library can provide.
+
+    :ivar int id: The channel ID.
+    """
+    __slots__ = ()
+    
+class RoleMention(Mention):
+    """A mention of a role (`<@&319753218592866315>`).
+
+    Note that only IDs are included in message content, not the name associated with the mention, so that is the only field this library can provide.
+
+    :ivar int id: The role ID.
+    """
+    __slots__ = ()
+
+@dataclass(frozen=True, slots=True)
+class Everyone(Node):
+    """@everyone.
+
+    This represents the *rendering* of the text, not whether or not it actually pings. These are not the same in all cases: `\@everyone` will
+    prevent the @everyone from being rendered, but the message will still ping people.
+    """
+
+@dataclass(frozen=True, slots=True)
+class Here(Node):
+    """@here.
+
+    This represents the *rendering* of the text, not whether or not it actually pings. These are not the same in all cases: `\@here` will
+    prevent the @here from being rendered, but the message will still ping people.
+    """
 
 @dataclass(frozen=True, slots=True)
 class Markup:
