@@ -10,3 +10,7 @@ A parser for Discord's flavour of text markup that aims to be as accurate as pos
 - Parsing markup besides that in message content from the API, like the highlighting seen in the client while typing a message
 - Imitating platforms other than web/desktop
 - Robustly rendering results to HTML (though methods to do this are still included)
+
+## Source
+The logic for this module was worked out by hand by testing against Discord's official client through trial and error.
+As such, it may have subtle inaccuracies. If you find one of these, please let me know by filing an issue! 
