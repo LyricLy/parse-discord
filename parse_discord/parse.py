@@ -22,7 +22,7 @@ main_source = r"""
 (?:\\.(*SKIP)(*F))?
 
 # asterisks
-  \*(?!\s)(?<i>(?:\\\p{Punct}|\*\*|[^*\\])+?)(?<!\s{3}|\n\s*)\*(?!\*)   # italics
+  \*(?!\s)(?<i>(?:\\\p{Punct}|\*\*|[^*\\])+?)(?<!\s)\ {0,2}\*(?!\*)   # italics
 | \*\*(?<b>(?&some))\*\*(?!\*)  # bold
 
 # underscores, basically the same deal
@@ -111,7 +111,7 @@ class Context:
 
 def append_text(l: list[Node], t: str):
     if t:
-        l.append(Text(regex.sub(r"\\(\p{Punct})", r"\1", t)))
+        l.append(Text(regex.sub(r"\\(\p{Punct})| +(?=\n)", r"\1", t)))
 
 def _parse(s: str, context: Context = Context(), /) -> Generator[tuple[str, Context], Markup | None, Markup]:
     l = []
@@ -140,7 +140,7 @@ def _parse(s: str, context: Context = Context(), /) -> Generator[tuple[str, Cont
                 title = r.rstrip().rstrip("#").rstrip()
                 l.append(ty((yield title, context.update(s, m.start()))))
             elif r := m.captures("q"):
-                l.append(Quote((yield "\n".join(r), context.update(s, m.start(), is_quote=True))))
+                l.append(Quote((yield "\n".join(r).rstrip(" "), context.update(s, m.start(), is_quote=True))))
 
     append_text(l, s[i:])
     return Markup(l)

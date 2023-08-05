@@ -61,8 +61,10 @@ class Asterisks(unittest.TestCase):
     def test_ws(self):
         self.assertEqual(parse("a * *"), Markup([Text("a * *")]))
         self.assertEqual(parse("a * b*"), Markup([Text("a * b*")]))
-        self.assertEqual(parse("a *b  *"), Markup([Text("a "), Italic(Markup([Text("b  ")]))]))
+        self.assertEqual(parse("a *b  *"), Markup([Text("a "), Italic(Markup([Text("b")]))]))
+        
         # never change, discord
-        self.assertEqual(parse("a *b   *"), Markup([Text("a *b   *")]))
+        self.assertEqual(parse("a **b   **"), Markup([Text("a "), Bold(Markup([Text("b   ")]))]))
+        self.assertEqual(parse("a  *b   *"), Markup([Text("a  *b   *")]))
 
         self.assertEqual(parse("** **"), Markup([Bold(Markup([Text(" ")]))]))

@@ -58,3 +58,4 @@ class Underscores(unittest.TestCase):
     def test_ws(self):
         self.assertEqual(parse("_ _"), Markup([Italic(Markup([Text(" ")]))]))
         self.assertEqual(parse("__ __"), Markup([Underline(Markup([Text(" ")]))]))
+        self.assertEqual(parse("a _b  _"), Markup([Text("a "), Italic(Markup([Text("b  ")]))]))

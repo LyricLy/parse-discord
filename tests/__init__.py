@@ -1,4 +1,4 @@
-from .core import *
+from .text import *
 from .asterisks import *
 from .underscores import *
 from .spoilers import *

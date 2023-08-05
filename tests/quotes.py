@@ -30,3 +30,6 @@ class Quotes(unittest.TestCase):
 
     def test_empty(self):
         self.assertEqual(parse("> "), Markup([Quote(Markup([]))]))
+
+    def test_strip_trailing(self):
+        self.assertEqual(parse("> foo  \nbar"), Markup([Quote(Markup([Text("foo")])), Text("bar")]))
