@@ -17,7 +17,7 @@ class Quotes(unittest.TestCase):
         self.assertEqual(parse(">  foo"), Markup([Quote(Markup([Text(" foo")]))]))
 
     def test_leading_space_ok(self):
-        self.assertEqual(parse(" > foo"), Markup([Quote(Markup([Text("foo")]))]))
+        self.assertEqual(parse(" > foo"), Markup([Text(" "), Quote(Markup([Text("foo")]))]))
 
     def test_no_nesting(self):
         self.assertEqual(parse("> > foo"), Markup([Quote(Markup([Text("> foo")]))]))
@@ -27,3 +27,6 @@ class Quotes(unittest.TestCase):
 
     def test_codeblock_scourge(self):
         self.assertEqual(parse("*> ```\nfoo```*"), Markup([Italic(Markup([Quote(Markup([Text("```")])), Text("foo```")]))]))
+
+    def test_empty(self):
+        self.assertEqual(parse("> "), Markup([Quote(Markup([]))]))

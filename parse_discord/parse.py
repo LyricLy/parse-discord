@@ -44,8 +44,8 @@ main_source = r"""
 """
 
 quote_source = r"""
-| (?:^\s*>\ (?<q>[^\n]*)\n?)+  # line
-| ^\s*>>>\ (?<q>.*)  # block
+| (?:(?<=^ *)>\ (?<q>[^\n]*)\n?)+  # line
+| (?<=^ *)>>>\ (?<q>.*)  # block
 """
 
 flags = regex.X | regex.S | regex.M | regex.POSIX | regex.VERSION1
