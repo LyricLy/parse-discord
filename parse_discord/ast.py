@@ -194,7 +194,7 @@ class CustomEmoji(Node):
 class UnicodeEmoji(Node):
     """A Unicode emoji (`🥺`).
 
-    This library does not make an attempt to match the set of emoji supported by Discord, so it may emit `UnicodeEmoji` for emoji not supported
+    The library might not match the set of emoji supported by Discord, so it may emit `UnicodeEmoji` for emoji not supported
     by the platform. It also will not emit `UnicodeEmoji` for emoji that were escaped with backslashes.
 
     :ivar str char: The grapheme corresponding to the emoji. Might be multiple characters.
