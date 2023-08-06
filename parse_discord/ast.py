@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from dataclasses import dataclass
 
 
@@ -12,6 +13,7 @@ __all__ = (
     "Header1", "Header2", "Header3", 
     "RoleMention", "ChannelMention", "UserMention",
     "Everyone", "Here",
+    "Timestamp",
 )
 
 
@@ -119,9 +121,6 @@ class Codeblock(Node):
     language: str | None
     content: str
 
-    def __repr__(self):
-        return f"Codeblock({self.language!r}, {self.content!r})"
-
 @dataclass(frozen=True, slots=True)
 class Mention(Node):
     """Base class for mentions."""
@@ -129,10 +128,10 @@ class Mention(Node):
     id: int
 
     def __repr__(self):
-        return f"{type(self)}({self.id!r})"
+        return f"{type(self).__name__}({self.id!r})"
 
 class UserMention(Mention):
-    """A mention of a user (`<@319753218592866315>`).
+    r"""A mention of a user (`<@319753218592866315>`).
 
     Note that only IDs are included in message content, not the name associated with the mention, so that is the only field this library can provide.
 
@@ -163,7 +162,7 @@ class RoleMention(Mention):
 
 @dataclass(frozen=True, slots=True)
 class Everyone(Node):
-    """@everyone.
+    r"""@everyone.
 
     This represents the *rendering* of the text, not whether or not it actually pings. These are not the same in all cases: `\@everyone` will
     prevent the @everyone from being rendered, but the message will still ping people.
@@ -171,11 +170,22 @@ class Everyone(Node):
 
 @dataclass(frozen=True, slots=True)
 class Here(Node):
-    """@here.
+    r"""@here.
 
     This represents the *rendering* of the text, not whether or not it actually pings. These are not the same in all cases: `\@here` will
     prevent the @here from being rendered, but the message will still ping people.
     """
+
+@dataclass(frozen=True, slots=True)
+class Timestamp(Node):
+    """A timestamp (`<t:1691280044:R>`).
+
+    :ivar datetime.datetime time: The time being referenced as a timezone-aware UTC datetime.
+    :ivar str format: The formatting code, a single character. `f` by default.
+    """
+
+    time: datetime.datetime
+    format: str
 
 @dataclass(frozen=True, slots=True)
 class Markup:

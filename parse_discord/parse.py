@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from enum import Enum
 from typing import Generator, Any
 
@@ -15,19 +16,18 @@ __all__ = ("parse",)
 main_source = r"""
 # utility definitions
 (?(DEFINE)
-    (?<e>\\.)
-    (?<some>(?:(?&e)|[^\\])+?)
+    (?<some>(?:\\.|[^\\])+?)
 )
 
 # skip escapes
 (?:\\.(*SKIP)(*F))?
 
 # asterisks
-  \*(?!\s)(?<i>(?:(?&e)|\*\*|[^*\\])+?)(?<!\s)\ {0,2}\*(?!\*)   # italics
+  \*(?!\s)(?<i>(?:\\.|\*\*|[^*\\])+?)(?<!\s)\ {0,2}\*(?!\*)   # italics
 | \*\*(?<b>(?&some))\*\*(?!\*)  # bold
 
 # underscores, basically the same deal
-| _(?<i>(?:(?&e)|__|[^_\\])+?)_(?!_)  # italics (doesn't have the same weird whitespace rules as asterisks)
+| _(?<i>(?:\\.|__|[^_\\])+?)_(?!_)  # italics (doesn't have the same weird whitespace rules as asterisks)
 | __(?<u>(?&some))__(?!_)  # underline
 
 # spoilers
@@ -46,6 +46,9 @@ main_source = r"""
 | <@&(?<rm>[0-9]+)>
 | (?<ev>@everyone)
 | (?<he>@here)
+
+# time
+| <t:(?<t>[0-9]+)(?::(?<f>[tTdDfFR]))?>
 
 # quotes
 %s
@@ -143,15 +146,19 @@ def resolve_match(m: regex.Match, ctx: Context, s: str) -> Generator[tuple[str, 
             r = r.removesuffix(" ")
         return InlineCode(r)
 
-    elif r := m.group("cb"):
+    if r := m.group("cb"):
         return Codeblock(m.group("l") or None, r.strip())
 
-    elif r := m.group("h"):
+    if r := m.group("h"):
         ty = [Header1, Header2, Header3][len(m.group("ty"))-1]
         title = r.rstrip().rstrip("#").rstrip()
         return ty((yield title, ctx.update(s, m)))
 
-    elif r := m.captures("q"):
+    if r := m.group("t"):
+        dt = datetime.datetime.fromtimestamp(int(r), datetime.timezone.utc)
+        return Timestamp(dt, m.group("f") or "f")
+
+    if r := m.captures("q"):
         return Quote((yield "\n".join(r).rstrip(" "), ctx.update(s, m, is_quote=True)))
 
     assert False
@@ -169,7 +176,8 @@ def _parse(s: str, ctx: Context = Context(), /) -> Generator[tuple[str, Context]
 def parse(string: str, /) -> Markup:
     """Parse a string.
 
-    Typical usage of this library will involve calling `parse` on message content returned by the API, then manipulating the resulting tree somehow.
+    Typical usage of this library will involve calling `parse` on message content returned by the API,
+    then manipulating the resulting tree somehow.
 
     :param string: The string to parse.
     :returns: The resulting tree.
@@ -187,4 +195,3 @@ def parse(string: str, /) -> Markup:
                 return current_value
         else:
             stack.append(_parse(r, c))
-            
