@@ -21,3 +21,6 @@ class Core(unittest.TestCase):
 
     def test_digit_not_escaped(self):
         self.assertEqual(parse(r"\0"), Markup([Text(r"\0")]))
+
+    def test_preserve_shrug(self):
+        self.assertEqual(parse(r"¯\_(ツ)_/¯"), Markup([Text(r"¯\_(ツ)_/¯")]))

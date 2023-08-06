@@ -131,7 +131,7 @@ class Context:
 
 def append_text(l: list[Node], t: str):
     if t:
-        l.append(Text(regex.sub(r"\\([<>\p{Punct}]|%s)| +(?=\n)" % emoji_source, r"\1", t)))
+        l.append(Text(regex.sub(r"\\([<>\p{Punct}]|%s)(?!(?<=¯\\_)\(ツ\)_/¯)| +(?=\n)" % emoji_source, r"\1", t)))
 
 def resolve_match(m: regex.Match, ctx: Context, s: str) -> Generator[tuple[str, Context], Markup, Node]:
     for g, ty in [("i", Italic), ("b", Bold), ("u", Underline), ("s", Spoiler)]:
