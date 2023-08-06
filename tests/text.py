@@ -18,3 +18,6 @@ class Core(unittest.TestCase):
 
     def test_self_escape(self):
         self.assertEqual(parse(r"\\\*"), Markup([Text(r"\*")]))
+
+    def test_digit_not_escaped(self):
+        self.assertEqual(parse(r"\0"), Markup([Text(r"\0")]))

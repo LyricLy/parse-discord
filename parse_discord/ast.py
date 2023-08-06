@@ -14,6 +14,7 @@ __all__ = (
     "RoleMention", "ChannelMention", "UserMention",
     "Everyone", "Here",
     "Timestamp",
+    "CustomEmoji", "UnicodeEmoji",
 )
 
 
@@ -175,6 +176,34 @@ class Here(Node):
     This represents the *rendering* of the text, not whether or not it actually pings. These are not the same in all cases: `\@here` will
     prevent the @here from being rendered, but the message will still ping people.
     """
+
+@dataclass(frozen=True, slots=True)
+class CustomEmoji(Node):
+    """A custom emoji (`<:name:0>`).
+
+    :ivar int id: The emoji ID.
+    :ivar str name: The name of the emoji. This is trusted from the text and might not correspond with the actual emoji name according to the ID.
+    :ivar bool animated: Whether or not the emoji is animated.
+    """
+
+    id: int
+    name: str
+    animated: bool
+
+@dataclass(frozen=True, slots=True)
+class UnicodeEmoji(Node):
+    """A Unicode emoji (`🥺`).
+
+    This library does not make an attempt to match the set of emoji supported by Discord, so it may emit `UnicodeEmoji` for emoji not supported
+    by the platform. It also will not emit `UnicodeEmoji` for emoji that were escaped with backslashes.
+
+    :ivar str char: The grapheme corresponding to the emoji. Might be multiple characters.
+    """ 
+
+    char: str
+
+    def __repr__(self):
+        return f"UnicodeEmoji({self.char!r})"
 
 @dataclass(frozen=True, slots=True)
 class Timestamp(Node):

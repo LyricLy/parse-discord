@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 from enum import Enum
 from typing import Generator, Any
+from pathlib import Path
 
 import regex
 
@@ -12,6 +13,9 @@ from .ast import *
 
 
 __all__ = ("parse",)
+
+with open(Path(__file__).parent / "emoji.txt") as f:
+    emoji_source = f.read()
 
 main_source = r"""
 # utility definitions
@@ -47,12 +51,16 @@ main_source = r"""
 | (?<ev>@everyone)
 | (?<he>@here)
 
+# emoji
+| <(?<a>a?):(?<n>[a-zA-Z_0-9]+):(?<e>[0-9]+)>
+| (?<ue>%s)
+
 # time
 | <t:(?<t>-?[0-9]+)(?::(?<f>[tTdDfFR]))?>
 
 # quotes
 %s
-"""
+""" % (emoji_source, "%s")
 
 quote_source = r"""
 | (?:(?<=^ *)>\ (?<q>[^\n]*)\n?)+  # line
@@ -123,7 +131,7 @@ class Context:
 
 def append_text(l: list[Node], t: str):
     if t:
-        l.append(Text(regex.sub(r"\\([<>\p{Punct}])| +(?=\n)", r"\1", t)))
+        l.append(Text(regex.sub(r"\\([<>\p{Punct}]|%s)| +(?=\n)" % emoji_source, r"\1", t)))
 
 def resolve_match(m: regex.Match, ctx: Context, s: str) -> Generator[tuple[str, Context], Markup, Node]:
     for g, ty in [("i", Italic), ("b", Bold), ("u", Underline), ("s", Spoiler)]:
@@ -153,6 +161,12 @@ def resolve_match(m: regex.Match, ctx: Context, s: str) -> Generator[tuple[str, 
         ty = [Header1, Header2, Header3][len(m.group("ty"))-1]
         title = r.rstrip().rstrip("#").rstrip()
         return ty((yield title, ctx.update(s, m)))
+
+    if r := m.group("e"):
+        return CustomEmoji(int(r), m.group("n"), bool(m.group("a")))
+
+    if r := m.group("ue"):
+        return UnicodeEmoji(r)
 
     if r := m.group("t"):
         dt = datetime.datetime.fromtimestamp(int(r), datetime.timezone.utc)
@@ -194,4 +208,5 @@ def parse(string: str, /) -> Markup:
             if not stack:
                 return current_value
         else:
+            current_value = None
             stack.append(_parse(r, c))

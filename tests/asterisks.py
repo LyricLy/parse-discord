@@ -9,6 +9,9 @@ class Asterisks(unittest.TestCase):
     def test_italics(self):
         self.assertEqual(parse("*foo*"), Markup([Italic(Markup([Text("foo")]))]))
 
+    def test_multiple(self):
+        self.assertEqual(parse("*a* *b*"), Markup([Italic(Markup([Text("a")])), Text(" "), Italic(Markup([Text("b")]))]))
+
     def test_bold(self):
         self.assertEqual(parse("**foo**"), Markup([Bold(Markup([Text("foo")]))]))
 

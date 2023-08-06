@@ -13,4 +13,5 @@ A parser for Discord's flavour of text markup that aims to be as accurate as pos
 
 ## Source
 The logic for this module was worked out by hand by testing against Discord's official client through trial and error.
-As such, it may have subtle inaccuracies. If you find one of these, please let me know by filing an issue! 
+As such, it may have subtle inaccuracies, especially in handling of Unicode. If you find a case that isn't parsed
+the same as it is in Discord, let me know by filing an issue!

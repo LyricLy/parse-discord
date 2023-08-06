@@ -7,3 +7,4 @@ from .headers import *
 from .quotes import *
 from .mentions import *
 from .time import *
+from .emoji import *
