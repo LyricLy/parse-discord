@@ -24,3 +24,6 @@ class Core(unittest.TestCase):
 
     def test_preserve_shrug(self):
         self.assertEqual(parse(r"¯\_(ツ)_/¯"), Markup([Text(r"¯\_(ツ)_/¯")]))
+
+    def test_escape_shrug(self):
+        self.assertEqual(parse(r"\¯\_(ツ)_/¯"), Markup([Text(r"¯_(ツ)_/¯")]))
