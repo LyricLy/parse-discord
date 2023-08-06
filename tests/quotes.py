@@ -16,6 +16,12 @@ class Quotes(unittest.TestCase):
     def test_does_not_strip(self):
         self.assertEqual(parse(">  foo"), Markup([Quote(Markup([Text(" foo")]))]))
 
+    def test_not_in_middle(self):
+        self.assertEqual(parse("a > foo"), Markup([Text("a > foo")]))
+
+    def test_goes_through(self):
+        self.assertEqual(parse("a *> foo*"), Markup([Text("a "), Italic(Markup([Text("> foo")]))]))
+
     def test_leading_space_ok(self):
         self.assertEqual(parse(" > foo"), Markup([Text(" "), Quote(Markup([Text("foo")]))]))
 
@@ -23,7 +29,7 @@ class Quotes(unittest.TestCase):
         self.assertEqual(parse("> > foo"), Markup([Quote(Markup([Text("> foo")]))]))
 
     def test_early_close(self):
-        self.assertEqual(parse("_>>> a\nb_c"), Markup([Italic(Markup([Quote(Markup([Text("a\nb")]))])), Text("c")]))
+        self.assertEqual(parse("__>>> a\nb__c"), Markup([Underline(Markup([Quote(Markup([Text("a\nb")]))])), Text("c")]))
 
     def test_codeblock_scourge(self):
         self.assertEqual(parse("*> ```\nfoo```*"), Markup([Italic(Markup([Quote(Markup([Text("```")])), Text("foo```")]))]))

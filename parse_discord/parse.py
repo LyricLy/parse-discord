@@ -31,7 +31,7 @@ main_source = r"""
 | \*\*(?<b>(?&some))\*\*(?!\*)  # bold
 
 # underscores, basically the same deal
-| _(?<i>(?:\\.|__|[^_\\])+?)_(?!_)  # italics (doesn't have the same weird whitespace rules as asterisks)
+| _(?<i>(?:\\.|__|[^_\\])+?)_(?![a-zA-Z0-9_])  # italics (doesn't have the same weird whitespace rules as asterisks)
 | __(?<u>(?&some))__(?!_)  # underline
 
 # spoilers
@@ -63,8 +63,8 @@ main_source = r"""
 """ % (emoji_source, "%s")
 
 quote_source = r"""
-| (?:(?<=^ *)>\ (?<q>[^\n]*)\n?)+  # line
-| (?<=^ *)>>>\ (?<q>.*)  # block
+| (?:(?<=^\ *)>\ (?<q>[^\n]*)\n?)+  # line
+| (?<=^\ *)>>>\ (?<q>.*)  # block
 """
 
 flags = regex.X | regex.S | regex.M | regex.POSIX | regex.VERSION1

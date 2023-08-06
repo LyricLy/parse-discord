@@ -42,6 +42,12 @@ class Underscores(unittest.TestCase):
     def test_right_assoc(self):
         self.assertEqual(parse("__foo_"), Markup([Text("_"), Italic(Markup([Text("foo")]))]))
 
+    def test_following_breaks(self):
+        self.assertEqual(parse("_a_b"), Markup([Text("_a_b")]))
+
+    def test_following_symbol_fine(self):
+        self.assertEqual(parse("_a_$"), Markup([Italic(Markup([Text("a")])), Text("$")]))
+
     def test_n_on_right(self):
         for i in range(20):
             p = parse(f"_foo____{'_'*i}")
