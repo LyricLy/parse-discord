@@ -48,7 +48,7 @@ main_source = r"""
 | (?<he>@here)
 
 # time
-| <t:(?<t>[0-9]+)(?::(?<f>[tTdDfFR]))?>
+| <t:(?<t>-?[0-9]+)(?::(?<f>[tTdDfFR]))?>
 
 # quotes
 %s
