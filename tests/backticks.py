@@ -26,7 +26,7 @@ class Backticks(unittest.TestCase):
         self.assertEqual(parse("```foo```"), Markup([Codeblock(None, "foo")]))
 
     def test_block_strip(self):
-        self.assertEqual(parse("```\nfoo\n```"), Markup([Codeblock(None, "foo")]))
+        self.assertEqual(parse("```\nfoo \n```"), Markup([Codeblock(None, "foo ")]))
 
     def test_block_lang(self):
         self.assertEqual(parse("```py\nfoo```"), Markup([Codeblock("py", "foo")]))

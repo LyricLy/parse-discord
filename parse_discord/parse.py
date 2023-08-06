@@ -155,7 +155,7 @@ def resolve_match(m: regex.Match, ctx: Context, s: str) -> Generator[tuple[str, 
         return InlineCode(r)
 
     if r := m.group("cb"):
-        return Codeblock(m.group("l") or None, r.strip())
+        return Codeblock(m.group("l") or None, r.strip("\n"))
 
     if r := m.group("h"):
         ty = [Header1, Header2, Header3][len(m.group("ty"))-1]
