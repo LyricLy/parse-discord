@@ -3,16 +3,16 @@
 from __future__ import annotations
 
 import datetime
+import regex
 from dataclasses import dataclass
 
 
 __all__ = (
-    "Node", "Markup", "Style",
+    "Markup", "Node", "Style",
     "Text", "Bold", "Italic", "Underline", "Spoiler", "Strikethrough",
     "Quote", "Header", "InlineCode", "Codeblock",
-    "RoleMention", "ChannelMention", "UserMention",
-    "Timestamp", "CustomEmoji",
-    "Everyone", "Here", "UnicodeEmoji",
+    "UserMention", "ChannelMention", "RoleMention", "Timestamp",
+    "CustomEmoji", "UnicodeEmoji", "Everyone", "Here",
 )
 
 
@@ -203,10 +203,83 @@ class Markup:
 
     A `Markup` is a list of one or more {class}`Node`s that make up its content. Nodes may be simple text nodes or they may be style nodes, like {class}`Bold`, that contain other `Markup`s recursively.
 
+    The `__str__` method forms a round-trip: while `str(parse(s))` may not be the same string as `s`, it will display identically on Discord. `parse(str(m))` will always equal `m`.
+
+    An additional property is that the string forms of separate `Markup`s can be concatenated safely: `str(m) + str(n)` will always have the same appearance as `str(Markup(m.nodes + n.nodes))`.
+    This is not always true when simply concatenating markup strings. For example, `*a` displays an asterisk followed by an `a`, and `b*` displays a `b` followed by an asterisk, but if you
+    add the strings `"*a"` and `"b*"` together, you get `"*ab*"`, which would display `ab` in italic. If you instead concatenate `parse("*a")` and `parse("b*")`,
+    the asterisks will be escaped and this cannot occur.
+
     :ivar list[Node] nodes: The nodes contained.
     """
 
     nodes: list[Node]
+
+    def __str__(self):
+        out = ""
+        for idx, node in enumerate(self.nodes):
+            is_middle = idx != len(self.nodes)-1
+            match node:
+                case Text(t):
+                    # this could be less aggressive to save on character count
+                    out += regex.sub(r"([^A-Za-z0-9\s])", r"\\\1", t)
+                case Header(b, n):
+                    out += f"{'#'*n} {b} #" + "\n"*is_middle
+                case Quote(b):
+                    out += "".join(f"> {x}\n" for x in str(b).split("\n"))[:None if is_middle else -1]
+                case Style(b):
+                    match node:
+                        case Bold():
+                            outer = "**"
+                        case Italic():
+                            # in general, _ is much more sensible than * and works without issue in most contexts.
+                            # however, it doesn't work if the closing _ is followed by an alphanumeric character,
+                            # so we must use * in these cases instead.
+                            if is_middle and isinstance(nxt := self.nodes[idx+1], Text) and regex.match("[a-zA-Z0-9_]", nxt.text):
+                                outer = "*"
+                            else:
+                                outer = "_"
+                        case Underline():
+                            outer = "__"
+                        case Strikethrough():
+                            outer = "~~"
+                        case Spoiler():
+                            outer = "||"
+                        case _:
+                            assert False
+                    out += f"{outer}{b}{outer}"
+                case InlineCode(c):
+                    outer = "``" if regex.search("(?<!`)`(?!`)", c) else "`"
+                    start = " " * c.lstrip(" ").startswith("`")
+                    end = " " * c.rstrip(" ").endswith("`")
+                    out += f"{outer}{start}{c}{end}{outer}"
+                case Codeblock(None, c):
+                    out += f"```{c}```"
+                case Codeblock(l, c):
+                    out += f"```{l}\n{c}```"
+                case Mention(i):
+                    match node:
+                        case UserMention():
+                            symbol = "@"
+                        case ChannelMention():
+                            symbol = "#"
+                        case RoleMention():
+                            symbol = "@&"
+                        case _:
+                            assert False
+                    out += f"<{symbol}{i}>"
+                case Timestamp(t, f):
+                    form = f":{f}" * (f != "f")
+                    out += f"<t:{t.timestamp():.0f}{form}>"
+                case UnicodeEmoji(t):
+                    out += t
+                case CustomEmoji(i, n, a):
+                    out += f"<{'a'*a}:{n}:{i}>"
+                case Everyone():
+                    out += "@everyone"
+                case Here():
+                    out += "@here"
+        return out
 
     def __repr__(self):
         return f"<{', '.join(map(repr, self.nodes))}>"
