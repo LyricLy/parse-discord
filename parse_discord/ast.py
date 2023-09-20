@@ -234,4 +234,4 @@ class Markup:
     nodes: list[Node]
 
     def __repr__(self):
-        return repr(self.nodes)
+        return f"<{', '.join(map(repr, self.nodes))}>"
