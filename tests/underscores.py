@@ -66,7 +66,10 @@ class Underscores(unittest.TestCase):
             nth, part = divmod(i, 4)
             self.assertEqual(depth_of_insanity(p.nodes[0]), nth*2+(part//2%2) if part%2 else nth)
             self.assertIsInstance(p.nodes[0], (Text, Italic if part%2 else Underline))
-            
+
+    def test_no_nest(self):
+        self.assertEqual(parse("_a   _b_   c_"), Markup([Text("_a   "), Italic(Markup([Text("b")])), Text("   c_")]))
+
     def test_ws(self):
         self.assertEqual(parse("_ _"), Markup([Italic(Markup([Text(" ")]))]))
         self.assertEqual(parse("__ __"), Markup([Underline(Markup([Text(" ")]))]))

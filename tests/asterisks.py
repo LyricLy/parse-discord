@@ -66,7 +66,10 @@ class Asterisks(unittest.TestCase):
             nth, part = divmod(i, 4)
             self.assertEqual(depth_of_insanity(p.nodes[0]), nth*2+(part//2%2) if part%2 else nth)
             self.assertIsInstance(p.nodes[0], (Text, Italic if part%2 else Bold))
-            
+
+    def test_no_nest(self):
+        self.assertEqual(parse("*a   *b*   c*"), Markup([Text("*a   "), Italic(Markup([Text("b")])), Text("   c*")]))
+
     def test_ws(self):
         self.assertEqual(parse("a * *"), Markup([Text("a * *")]))
         self.assertEqual(parse("a * b*"), Markup([Text("a * b*")]))

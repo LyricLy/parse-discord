@@ -136,10 +136,10 @@ def append_text(l: list[Node], t: str):
     if t:
         l.append(Text(regex.sub(r"(?|\\([^A-Za-z0-9\s])|(¯\\_\(ツ\)_/¯))| +(?=\n)", r"\1", t)))
 
-def resolve_match(m: regex.Match, ctx: Context, s: str) -> Generator[tuple[str, Context], Markup, Node]:
+def resolve_match(m: regex.Match, ctx: Context, s: str) -> Node:
     for g, ty in [("i", Italic), ("b", Bold), ("u", Underline), ("s", Spoiler), ("st", Strikethrough)]:
         if r := m.group(g):
-            return ty((yield r, ctx.update(s, m)))
+            return ty(_parse(r, ctx.update(s, m)))
 
     for g, ty in [("um", UserMention), ("cm", ChannelMention), ("rm", RoleMention)]:
         if r := m.group(g):
@@ -163,7 +163,7 @@ def resolve_match(m: regex.Match, ctx: Context, s: str) -> Generator[tuple[str, 
     if r := m.group("h"):
         ty = [Header1, Header2, Header3][len(m.group("ty"))-1]
         title = r.rstrip().rstrip("#").rstrip()
-        return ty((yield title, ctx.update(s, m)))
+        return ty(_parse(title, ctx.update(s, m)))
 
     if r := m.group("e"):
         return CustomEmoji(int(r), m.group("n"), bool(m.group("a")))
@@ -176,17 +176,17 @@ def resolve_match(m: regex.Match, ctx: Context, s: str) -> Generator[tuple[str, 
         return Timestamp(dt, m.group("f") or "f")
 
     if r := m.captures("q"):
-        return Quote((yield "\n".join(r).rstrip(" "), ctx.update(s, m, is_quote=True)))
+        return Quote(_parse("\n".join(r).rstrip(" "), ctx.update(s, m, is_quote=True)))
 
     assert False
 
-def _parse(s: str, ctx: Context = Context(), /) -> Generator[tuple[str, Context], Markup | None, Markup]:
+def _parse(s: str, ctx: Context = Context(), /) -> Markup:
     l = []
     it, s, i = ctx.parse(s)
     for m in it:
         append_text(l, s[i:m.start()])
         i = m.end()
-        l.append((yield from resolve_match(m, ctx, s)))
+        l.append(resolve_match(m, ctx, s))
     append_text(l, s[i:])
     return Markup(l)
 
@@ -199,17 +199,4 @@ def parse(string: str, /) -> Markup:
     :param string: The string to parse.
     :returns: The resulting tree.
     """
-    # manually implement recursion on the heap to avoid stack overflow
-    stack = [_parse(string)]
-    current_value = None
-    while True:
-        try: 
-            r, c = stack[-1].send(current_value)
-        except StopIteration as e:
-            stack.pop()
-            current_value = e.value
-            if not stack:
-                return current_value
-        else:
-            current_value = None
-            stack.append(_parse(r, c))
+    return _parse(string)
