@@ -9,12 +9,11 @@ from dataclasses import dataclass
 __all__ = (
     "Node", "Markup",
     "Text", "Bold", "Italic", "Underline", "Spoiler",
-    "Quote", "InlineCode", "Codeblock", 
+    "Strikethrough", "Quote", "InlineCode", "Codeblock", 
     "Header1", "Header2", "Header3", 
     "RoleMention", "ChannelMention", "UserMention",
-    "Everyone", "Here",
-    "Timestamp",
-    "CustomEmoji", "UnicodeEmoji",
+    "Timestamp", "CustomEmoji",
+    "Everyone", "Here", "UnicodeEmoji",
 )
 
 
@@ -59,6 +58,13 @@ class Italic(Style):
 
 class Underline(Style):
     """Underlined text (`__foo__`).
+
+    :ivar Markup inner: The inner markup.
+    """
+    __slots__ = ()
+
+class Strikethrough(Style):
+    """Struck-through text (`~~foo~~`).
 
     :ivar Markup inner: The inner markup.
     """

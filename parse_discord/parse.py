@@ -34,6 +34,9 @@ main_source = r"""
 | _(?<i>(?:\\.|__|[^_\\])+?)_(?![a-zA-Z0-9_])  # italics (doesn't have the same weird whitespace rules as asterisks)
 | __(?<u>(?&some))__(?!_)  # underline
 
+# strikethrough
+| ~~(?<st>.+?)~~(?!_)
+
 # spoilers
 | \|\|(?<s>.+?)\|\|
 
@@ -134,7 +137,7 @@ def append_text(l: list[Node], t: str):
         l.append(Text(regex.sub(r"(?|\\([^A-Za-z0-9\s])|(¯\\_\(ツ\)_/¯))| +(?=\n)", r"\1", t)))
 
 def resolve_match(m: regex.Match, ctx: Context, s: str) -> Generator[tuple[str, Context], Markup, Node]:
-    for g, ty in [("i", Italic), ("b", Bold), ("u", Underline), ("s", Spoiler)]:
+    for g, ty in [("i", Italic), ("b", Bold), ("u", Underline), ("s", Spoiler), ("st", Strikethrough)]:
         if r := m.group(g):
             return ty((yield r, ctx.update(s, m)))
 

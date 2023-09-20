@@ -26,7 +26,7 @@ class Quotes(unittest.TestCase):
         self.assertEqual(parse(" > foo"), Markup([Text(" "), Quote(Markup([Text("foo")]))]))
 
     def test_no_nesting(self):
-        self.assertEqual(parse("> > foo"), Markup([Quote(Markup([Text("> foo")]))]))
+        self.assertEqual(parse("> > foo\n> > bar"), Markup([Quote(Markup([Text("> foo\n> bar")]))]))
 
     def test_early_close(self):
         self.assertEqual(parse("__>>> a\nb__c"), Markup([Underline(Markup([Quote(Markup([Text("a\nb")]))])), Text("c")]))
