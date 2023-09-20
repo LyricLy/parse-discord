@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import regex
 from dataclasses import dataclass
+from typing import Iterator
 
 
 __all__ = (
@@ -214,6 +215,17 @@ class Markup:
     """
 
     nodes: list[Node]
+
+    def walk(self) -> Iterator[Node]:
+        """A simple way to visit all the nodes in the tree.
+
+        :returns: A recursive iterator of all the {class}`Node` objects in the object, in rendering order. Parents come before children.
+        """
+        for node in self.nodes:
+            yield node
+            match node:
+                case Style(b):
+                    yield from b.walk()
 
     def __str__(self):
         out = ""
