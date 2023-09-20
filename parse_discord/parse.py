@@ -161,9 +161,8 @@ def resolve_match(m: regex.Match, ctx: Context, s: str) -> Node:
         return Codeblock(m.group("l") or None, r.strip("\n"))
 
     if r := m.group("h"):
-        ty = [Header1, Header2, Header3][len(m.group("ty"))-1]
         title = r.rstrip().rstrip("#").rstrip()
-        return ty(_parse(title, ctx.update(s, m)))
+        return Header(_parse(title, ctx.update(s, m)), len(m.group("ty")))
 
     if r := m.group("e"):
         return CustomEmoji(int(r), m.group("n"), bool(m.group("a")))

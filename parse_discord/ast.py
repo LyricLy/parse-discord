@@ -8,9 +8,8 @@ from dataclasses import dataclass
 
 __all__ = (
     "Node", "Markup", "Style",
-    "Text", "Bold", "Italic", "Underline", "Spoiler",
-    "Strikethrough", "Quote", "InlineCode", "Codeblock", 
-    "Header1", "Header2", "Header3", 
+    "Text", "Bold", "Italic", "Underline", "Spoiler", "Strikethrough",
+    "Quote", "Header", "InlineCode", "Codeblock",
     "RoleMention", "ChannelMention", "UserMention",
     "Timestamp", "CustomEmoji",
     "Everyone", "Here", "UnicodeEmoji",
@@ -69,17 +68,17 @@ class Quote(Style):
     """A quote (`> foo`)."""
     __slots__ = ()
 
-class Header1(Style):
-    """The largest header (`# foo`)."""
-    __slots__ = ()
+@dataclass(frozen=True, slots=True)
+class Header(Style):
+    """A header (`# foo`).
 
-class Header2(Style):
-    """The middle-sized header (`## foo`)."""
-    __slots__ = ()
+    :ivar int level: The level of the header (is it `#`, `##`, or `###`)?
+    """
 
-class Header3(Style):
-    """The smallest header (`### foo`)."""
-    __slots__ = ()
+    level: int
+
+    def __repr__(self):
+        return f"Header({self.inner!r}, {self.level})"
 
 @dataclass(frozen=True, slots=True)
 class InlineCode(Node):
