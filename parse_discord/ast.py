@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 
 __all__ = (
-    "Node", "Markup",
+    "Node", "Markup", "Style",
     "Text", "Bold", "Italic", "Underline", "Spoiler",
     "Strikethrough", "Quote", "InlineCode", "Codeblock", 
     "Header1", "Header2", "Header3", 
@@ -35,7 +35,10 @@ class Text(Node):
 
 @dataclass(frozen=True, slots=True)
 class Style(Node):
-    """Base class for elements that contain some other markup and add styling to it."""
+    """Base class for elements that contain some other markup and add styling to it.
+
+    :ivar Markup inner: The inner markup.
+    """
 
     inner: Markup
 
@@ -43,66 +46,39 @@ class Style(Node):
         return f"{type(self).__name__}({self.inner!r})"
 
 class Bold(Style):
-    """Bold text (`**foo**`).
-
-    :ivar Markup inner: The inner markup.
-    """
+    """Bold text (`**foo**`)."""
     __slots__ = ()
 
 class Italic(Style):
-    """Italicized text (`*foo*` or `_foo_`).
-
-    :ivar Markup inner: The inner markup.
-    """
+    """Italicized text (`*foo*` or `_foo_`)."""
     __slots__ = ()
 
 class Underline(Style):
-    """Underlined text (`__foo__`).
-
-    :ivar Markup inner: The inner markup.
-    """
+    """Underlined text (`__foo__`)."""
     __slots__ = ()
 
 class Strikethrough(Style):
-    """Struck-through text (`~~foo~~`).
-
-    :ivar Markup inner: The inner markup.
-    """
+    """Struck-through text (`~~foo~~`)."""
     __slots__ = ()
 
 class Spoiler(Style):
-    """A spoiler (`||foo||`).
-
-    :ivar Markup inner: The inner markup.
-    """
+    """A spoiler (`||foo||`)."""
     __slots__ = ()
 
 class Quote(Style):
-    """A quote (`> foo`).
-
-    :ivar Markup inner: The inner markup.
-    """
+    """A quote (`> foo`)."""
     __slots__ = ()
 
 class Header1(Style):
-    """The largest header (`# foo`).
-
-    :ivar Markup inner: The inner markup.
-    """
+    """The largest header (`# foo`)."""
     __slots__ = ()
 
 class Header2(Style):
-    """The middle-sized header (`## foo`).
-
-    :ivar Markup inner: The inner markup.
-    """
+    """The middle-sized header (`## foo`)."""
     __slots__ = ()
 
 class Header3(Style):
-    """The smallest header (`### foo`).
-
-    :ivar Markup inner: The inner markup.
-    """
+    """The smallest header (`### foo`)."""
     __slots__ = ()
 
 @dataclass(frozen=True, slots=True)
