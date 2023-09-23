@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import functools
 from enum import Enum
 from typing import Generator, Any
 from pathlib import Path
@@ -44,9 +45,6 @@ main_source = r"""
 | (?<x>`{1,2})(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
 | ```(?:(?<l>[a-zA-Z_\-+.0-9]*)\n)?(?<cb>.+?)```  # codeblock
 
-# headers
-| ^(?<ty>\#{1,3})\s+(?!\#)(?<h>[^\n]*)\n?
-
 # mentions
 | <@!?(?<um>[0-9]+)>
 | <\#(?<cm>[0-9]+)>
@@ -61,20 +59,28 @@ main_source = r"""
 # time
 | <t:(?<t>-?[0-9]+)(?::(?<f>[tTdDfFR]))?>
 
-# quotes
-%s
-""" % (emoji_source, "%s")
+# optional rules. we use a custom {{??name ...}} fence for this, handled by the code below.
 
-quote_source = r"""
+{{??headers
+| ^(?<ty>\#{1,3})\s+(?!\#)(?<h>[^\n]*)\n?
+}}
+
+{{??quotes
 | (?:(?<=^\ *)>\ (?<q>[^\n]*)\n?)+  # line
 | (?<=^\ *)>>>\ (?<q>.*)  # block
-"""
+}}
 
-flags = regex.X | regex.S | regex.M | regex.POSIX | regex.VERSION1
-# we're using % for this because format uses braces and we need those for regex. doubling them up is too ugly
-main_regex = regex.compile(main_source % quote_source, flags)
-main_regex_wo_quotes = regex.compile(main_source % "", flags)
+{{??lists
+| (?<=^\ *)(?:(?<lb>(?:[*-]|\d+\.)\ +)(?<li>.[^\n]*(?:\n\ [^\n]*)*)\n?)+
+}}
+""" % emoji_source
 
+@functools.cache
+def compiled_regex(**kwargs: bool):
+    s = main_source
+    for name, value in kwargs.items():
+        s = regex.sub(r"\{\{\?\?%s\b(.*?)}}" % name, r"\1" if value else "", s, flags=regex.S)
+    return regex.compile(s, regex.X | regex.S | regex.M | regex.POSIX | regex.VERSION1)
 
 class LineStart(Enum):
     NOTHING = 0
@@ -98,15 +104,15 @@ class Context:
         - `SPACE`: There are only spaces preceding the node.
         - `TEXT`: The node is in the middle of a line.
     :ivar bool is_quote: Whether the node is inside a quote.
+    :ivar int list_depth: The current level of list nesting, from 0 (not in a list) to 11.
     """
 
-    def __init__(self, line_start: LineStart = LineStart.NOTHING, is_quote: bool = False):
+    def __init__(self, line_start: LineStart = LineStart.NOTHING, is_quote: bool = False, list_depth: int = 0):
         self.line_start = line_start
         self.is_quote = is_quote
+        self.list_depth = list_depth
 
-    def update(self, s: str, m: regex.Match, *, is_quote: bool = False) -> Context:
-        # once in a quote, always in a quote
-        is_quote = self.is_quote or is_quote
+    def update(self, s: str, m: regex.Match, *, is_quote: bool = False, is_list: bool = False) -> Context:
         line_start = LineStart.NOTHING
         i = m.start()
         while True:
@@ -117,7 +123,13 @@ class Context:
                 line_start = LineStart.TEXT
                 break
             line_start = LineStart.SPACE
-        return Context(line_start, is_quote)
+
+        return Context(
+            line_start,
+            # once in a quote, always in a quote
+            self.is_quote or is_quote,
+            self.list_depth + is_list,
+        )
 
     def parse(self, s: str) -> tuple[Any, str, int]:
         if self.line_start == LineStart.NOTHING:
@@ -128,7 +140,11 @@ class Context:
             start = "$"
         i = len(start)
         s = start + s
-        r = main_regex if not self.is_quote else main_regex_wo_quotes
+        r = compiled_regex(
+            headers=not self.list_depth,
+            quotes=not self.is_quote,
+            lists=self.list_depth < 11,
+        )
         return r.finditer(s, i), s, i
 
 
@@ -160,10 +176,6 @@ def resolve_match(m: regex.Match, ctx: Context, s: str) -> Node:
     if r := m.group("cb"):
         return Codeblock(m.group("l") or None, r.strip("\n"))
 
-    if r := m.group("h"):
-        title = r.rstrip().rstrip("#").rstrip()
-        return Header(_parse(title, ctx.update(s, m)), len(m.group("ty")))
-
     if r := m.group("e"):
         return CustomEmoji(int(r), m.group("n"), bool(m.group("a")))
 
@@ -176,6 +188,19 @@ def resolve_match(m: regex.Match, ctx: Context, s: str) -> Node:
 
     if r := m.captures("q"):
         return Quote(_parse("\n".join(r).rstrip(" "), ctx.update(s, m, is_quote=True)))
+
+    if r := m.captures("li"):
+        items = []
+        bullets = m.captures("lb")
+        start = None if bullets[0].strip() in "*-" else min(max(int(bullets[0].split(".")[0]), 1), 1_000_000_000)
+        for bullet, item in zip(bullets, r):
+            t = regex.sub("^ {1,%d}" % len(bullet), "", item, flags=regex.M)
+            items.append(_parse(t, ctx.update(s, m, is_list=True)))
+        return List(start, items)
+
+    if r := m.group("h"):
+        title = r.rstrip().rstrip("#").rstrip()
+        return Header(_parse(title, ctx.update(s, m)), len(m.group("ty")))
 
     assert False
 

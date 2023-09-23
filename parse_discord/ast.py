@@ -11,7 +11,7 @@ from typing import Iterator
 __all__ = (
     "Markup", "Node", "Style",
     "Text", "Bold", "Italic", "Underline", "Spoiler", "Strikethrough",
-    "Quote", "Header", "InlineCode", "Codeblock",
+    "Quote", "Header", "InlineCode", "Codeblock", "List",
     "UserMention", "ChannelMention", "RoleMention", "Timestamp",
     "CustomEmoji", "UnicodeEmoji", "Everyone", "Here",
 )
@@ -80,6 +80,21 @@ class Header(Style):
 
     def __repr__(self):
         return f"Header({self.inner!r}, {self.level})"
+
+@dataclass(frozen=True, slots=True)
+class List(Node):
+    """A list, either ordered (`1. a`) or unordered (`- a`).
+
+    :ivar Optional[int] start: The number at which an ordered list starts, or None for an unordered list.
+        All the items after the first are numbered consecutively, independently of the numbers used in the original string.
+    :ivar list[Markup] items: The items in the list.
+    """
+
+    start: int | None
+    items: list[Markup]
+
+    def __repr__(self):
+        return f"List({self.start}, {self.items!r})"
 
 @dataclass(frozen=True, slots=True)
 class InlineCode(Node):
@@ -198,6 +213,9 @@ class Timestamp(Node):
     time: datetime.datetime
     format: str
 
+def indent(m, w):
+    return "".join(f"{w}{x}\n" for x in str(m).split("\n"))
+
 @dataclass(frozen=True, slots=True)
 class Markup:
     """The main unit of rich text.
@@ -226,19 +244,24 @@ class Markup:
             match node:
                 case Style(b):
                     yield from b.walk()
+                case List(_, bs):
+                    for b in bs:
+                        yield from b.walk()
 
     def __str__(self):
         out = ""
         for idx, node in enumerate(self.nodes):
             is_middle = idx != len(self.nodes)-1
+            def middled(s):
+                return s if is_middle else s[:-1]
             match node:
                 case Text(t):
                     # this could be less aggressive to save on character count
                     out += regex.sub(r"([^A-Za-z0-9\s])", r"\\\1", t)
                 case Header(b, n):
-                    out += f"{'#'*n} {b} #" + "\n"*is_middle
+                    out += middled(f"{'#'*n} {b} #\n")
                 case Quote(b):
-                    out += "".join(f"> {x}\n" for x in str(b).split("\n"))[:None if is_middle else -1]
+                    out += middled(indent(b, "> "))
                 case Style(b):
                     match node:
                         case Bold():
@@ -260,6 +283,9 @@ class Markup:
                         case _:
                             assert False
                     out += f"{outer}{b}{outer}"
+                case List(s, bs):
+                    bullet = f"{s}. " if s else "- "
+                    out += middled("".join(f"{bullet}{indent(x, ' '*len(bullet))[len(bullet):]}" for x in bs))
                 case InlineCode(c):
                     outer = "``" if regex.search("(?<!`)`(?!`)", c) else "`"
                     start = " " * c.lstrip(" ").startswith("`")
