@@ -92,3 +92,9 @@ class Lists(unittest.TestCase):
                 ])]),
             ]),
         )
+
+    def test_quotes_work(self):
+        self.assertEqual(parse("- > a"), Markup([List(None, [Markup([Quote(Markup([Text("a")]))])])]))
+
+    def test_headers_do_not(self):
+        self.assertEqual(parse("- # a"), Markup([List(None, [Markup([Text("# a")])])]))
