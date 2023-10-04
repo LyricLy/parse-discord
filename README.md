@@ -15,8 +15,8 @@ A parser for Discord's flavour of text markup that aims to be as accurate as pos
 The library is usable in its current state. However, there is work still to be done:
 - More ways to manipulate parse trees
 - Guide-level documentation
-- Recognizing URLs
-- Recognizing certain niche features such as referencing slash commands
+- Recognizing `[name](url)` links
+- Recognizing niche features such as slash command references
 
 ## Source
 The logic for this module was mostly worked out by hand by testing against Discord's official client through trial and error.

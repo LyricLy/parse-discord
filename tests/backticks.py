@@ -33,3 +33,9 @@ class Backticks(unittest.TestCase):
 
     def test_one_tick_block(self):
         self.assertEqual(parse("```````"), Markup([Codeblock(None, "`")]))
+
+    def test_two_together_inline(self):
+        self.assertEqual(parse("`a` b `c`"), Markup([InlineCode("a"), Text(" b "), InlineCode("c")]))
+
+    def test_two_together_block(self):
+        self.assertEqual(parse("```a``` b ```c```"), Markup([Codeblock(None, "a"), Text(" b "), Codeblock(None, "c")]))

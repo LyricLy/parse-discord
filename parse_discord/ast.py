@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+import copy
 import datetime
 import regex
 from dataclasses import dataclass
-from typing import Iterator
+from typing import Iterator, TYPE_CHECKING
+
+from .string import url_to_text
+
+if TYPE_CHECKING:
+    from urlstd.parse import URL
 
 
 __all__ = (
     "Markup", "Node", "Style",
     "Text", "Bold", "Italic", "Underline", "Spoiler", "Strikethrough",
-    "Quote", "Header", "InlineCode", "Codeblock", "List",
+    "Quote", "Header", "InlineCode", "Codeblock", "List", "Link",
     "UserMention", "ChannelMention", "RoleMention", "Timestamp",
     "CustomEmoji", "UnicodeEmoji", "Everyone", "Here",
 )
@@ -95,6 +101,45 @@ class List(Node):
 
     def __repr__(self):
         return f"List({self.start}, {self.items!r})"
+
+@dataclass(frozen=True, slots=True)
+class Link(Node):
+    """Hyperlinks (all of `https://example.com`, `<https://example.com>`, `[example](https://example.com)`, and `[example](<https://example.com>)`).
+
+    :ivar URL _url: The URL referenced by the link. See {meth}`target` and {meth}`display_target`.
+    :ivar Optional[Markup] inner: For `[text](url)` form links, the markup used to display the link. `None` for bare links. See {meth}`appearance`.
+    :ivar Optional[str] title: For `[text](url "title")` form links, the title (text shown when the link is hovered over). `None` for other links.
+    :ivar bool suppressed: Whether angle brackets were used to stop the link from being embedded.
+        Note that the library has no way of knowing if the link was actually embedded or not, as embedding is serverside and outside the scope of the library.
+    """
+
+    _url: URL
+    text: Markup | None
+    title: str | None
+    suppressed: bool
+
+    def __repr__(self):
+        return f"Link({self.target!r}, text={self.text!r}, title={self.title!r}, suppressed={self.suppressed})"
+
+    @property
+    def target(self) -> str:
+        """The URL one is sent to after clicking the link. Equivalent (but not necessarily equal) to the source URL."""
+        return url_to_text(self._url)
+
+    @property
+    def display_target(self) -> str:
+        """The URL a user is told they are going to if they click the link.
+        Equal to `target` with the username and password fields stripped, e.g. (`https://user:pass@example.com/` -> `https://example.com/`).
+        """
+        u = copy.deepcopy(self._url)
+        u.username = ""
+        u.password = ""
+        return url_to_text(u)
+
+    @property
+    def appearance(self) -> Markup:
+        """The appearance of the link before being clicked. Equal to `text or Markup([Text(display_target)])`."""
+        return self.text or Markup([Text(self.display_target)])
 
 @dataclass(frozen=True, slots=True)
 class InlineCode(Node):
@@ -213,9 +258,6 @@ class Timestamp(Node):
     time: datetime.datetime
     format: str
 
-def indent(m, w):
-    return "".join(f"{w}{x}\n" for x in str(m).split("\n"))
-
 @dataclass(frozen=True, slots=True)
 class Markup:
     """The main unit of rich text.
@@ -249,75 +291,8 @@ class Markup:
                         yield from b.walk()
 
     def __str__(self):
-        out = ""
-        for idx, node in enumerate(self.nodes):
-            is_middle = idx != len(self.nodes)-1
-            def middled(s):
-                return s if is_middle else s[:-1]
-            match node:
-                case Text(t):
-                    # this could be less aggressive to save on character count
-                    out += regex.sub(r"([^A-Za-z0-9\s])", r"\\\1", t)
-                case Header(b, n):
-                    out += middled(f"{'#'*n} {b} #\n")
-                case Quote(b):
-                    out += middled(indent(b, "> "))
-                case Style(b):
-                    match node:
-                        case Bold():
-                            outer = "**"
-                        case Italic():
-                            # in general, _ is much more sensible than * and works without issue in most contexts.
-                            # however, it doesn't work if the closing _ is followed by an alphanumeric character,
-                            # so we must use * in these cases instead.
-                            if is_middle and isinstance(nxt := self.nodes[idx+1], Text) and regex.match("[a-zA-Z0-9_]", nxt.text):
-                                outer = "*"
-                            else:
-                                outer = "_"
-                        case Underline():
-                            outer = "__"
-                        case Strikethrough():
-                            outer = "~~"
-                        case Spoiler():
-                            outer = "||"
-                        case _:
-                            assert False
-                    out += f"{outer}{b}{outer}"
-                case List(s, bs):
-                    bullet = f"{s}. " if s else "- "
-                    out += middled("".join(f"{bullet}{indent(x, ' '*len(bullet))[len(bullet):]}" for x in bs))
-                case InlineCode(c):
-                    outer = "``" if regex.search("(?<!`)`(?!`)", c) else "`"
-                    start = " " * c.lstrip(" ").startswith("`")
-                    end = " " * c.rstrip(" ").endswith("`")
-                    out += f"{outer}{start}{c}{end}{outer}"
-                case Codeblock(None, c):
-                    out += f"```{c}```"
-                case Codeblock(l, c):
-                    out += f"```{l}\n{c}```"
-                case Mention(i):
-                    match node:
-                        case UserMention():
-                            symbol = "@"
-                        case ChannelMention():
-                            symbol = "#"
-                        case RoleMention():
-                            symbol = "@&"
-                        case _:
-                            assert False
-                    out += f"<{symbol}{i}>"
-                case Timestamp(t, f):
-                    form = f":{f}" * (f != "f")
-                    out += f"<t:{t.timestamp():.0f}{form}>"
-                case UnicodeEmoji(t):
-                    out += t
-                case CustomEmoji(i, n, a):
-                    out += f"<{'a'*a}:{n}:{i}>"
-                case Everyone():
-                    out += "@everyone"
-                case Here():
-                    out += "@here"
-        return out
+        from .formatting import format_markup
+        return format_markup(self)
 
     def __repr__(self):
         return f"<{', '.join(map(repr, self.nodes))}>"

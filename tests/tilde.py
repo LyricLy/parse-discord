@@ -13,3 +13,5 @@ class Tilde(unittest.TestCase):
     def test_no_escape(self):
         self.assertEqual(parse(r"~~\~~"), Markup([Strikethrough(Markup([Text("\\")]))]))
 
+    def test_two_together(self):
+        self.assertEqual(parse("~~a~~ b ~~c~~"), Markup([Strikethrough(Markup([Text("a")])), Text(" b "), Strikethrough(Markup([Text("c")]))]))

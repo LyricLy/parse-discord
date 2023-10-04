@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "regex>=2023.6.3",
+    "urlstd>=2023.7.26",
 ]
 
 [project.urls]

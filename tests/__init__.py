@@ -10,4 +10,5 @@ from .mentions import *
 from .time import *
 from .emoji import *
 from .lists import *
+from .links import *
 from .formatting import *

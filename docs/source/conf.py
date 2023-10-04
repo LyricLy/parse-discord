@@ -14,6 +14,7 @@ extensions = ["myst_parser", "sphinx_search.extension", "autodoc2", "sphinx.ext.
 myst_enable_extensions = ["fieldlist"]
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
+    "urlstd": ("https://miute.github.io/urlstd/", None),
 }
 
 autodoc2_packages = ["../../parse_discord"]

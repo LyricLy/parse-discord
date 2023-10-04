@@ -70,6 +70,12 @@ class Underscores(unittest.TestCase):
     def test_no_nest(self):
         self.assertEqual(parse("_a   _b_   c_"), Markup([Text("_a   "), Italic(Markup([Text("b")])), Text("   c_")]))
 
+    def test_two_together_italic(self):
+        self.assertEqual(parse("_a_ b _c_"), Markup([Italic(Markup([Text("a")])), Text(" b "), Italic(Markup([Text("c")]))]))
+
+    def test_two_together_underline(self):
+        self.assertEqual(parse("__a__ b __c__"), Markup([Underline(Markup([Text("a")])), Text(" b "), Underline(Markup([Text("c")]))]))
+
     def test_ws(self):
         self.assertEqual(parse("_ _"), Markup([Italic(Markup([Text(" ")]))]))
         self.assertEqual(parse("__ __"), Markup([Underline(Markup([Text(" ")]))]))

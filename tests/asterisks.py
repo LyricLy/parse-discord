@@ -70,6 +70,12 @@ class Asterisks(unittest.TestCase):
     def test_no_nest(self):
         self.assertEqual(parse("*a   *b*   c*"), Markup([Text("*a   "), Italic(Markup([Text("b")])), Text("   c*")]))
 
+    def test_two_together_italic(self):
+        self.assertEqual(parse("*a* b *c*"), Markup([Italic(Markup([Text("a")])), Text(" b "), Italic(Markup([Text("c")]))]))
+
+    def test_two_together_bold(self):
+        self.assertEqual(parse("**a** b **c**"), Markup([Bold(Markup([Text("a")])), Text(" b "), Bold(Markup([Text("c")]))]))
+
     def test_ws(self):
         self.assertEqual(parse("a * *"), Markup([Text("a * *")]))
         self.assertEqual(parse("a * b*"), Markup([Text("a * b*")]))
