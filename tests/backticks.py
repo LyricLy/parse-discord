@@ -14,7 +14,7 @@ class Backticks(unittest.TestCase):
         self.assertEqual(parse("``foo``"), Markup([InlineCode("foo")]))
 
     def test_inline_stability(self):
-        self.assertEqual(parse("``````` `"), Markup([InlineCode("``````")]))
+        self.assertEqual(parse("```` `"), Markup([InlineCode("```")]))
 
     def test_strips(self):
         self.assertEqual(parse("``  `a  ``"), Markup([InlineCode(" `a  ")]))
@@ -33,6 +33,9 @@ class Backticks(unittest.TestCase):
 
     def test_one_tick_block(self):
         self.assertEqual(parse("```````"), Markup([Codeblock(None, "`")]))
+
+    def test_block_that_could_be_inline(self):
+        self.assertEqual(parse("```\n``\n```"), Markup([Codeblock(None, "``")]))
 
     def test_two_together_inline(self):
         self.assertEqual(parse("`a` b `c`"), Markup([InlineCode("a"), Text(" b "), InlineCode("c")]))

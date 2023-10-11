@@ -69,10 +69,9 @@ def format_markup(markup: Markup) -> str:
                 start = " " * c.lstrip(" ").startswith("`")
                 end = " " * c.rstrip(" ").endswith("`")
                 out += f"{outer}{start}{c}{end}{outer}"
-            case Codeblock(None, c):
-                out += f"```{c}```"
             case Codeblock(l, c):
-                out += f"```{l}\n{c}```"
+                l = l or ""
+                out += f"```{l}\n{c}\n```"
             case Mention(i):
                 match node:
                     case UserMention():

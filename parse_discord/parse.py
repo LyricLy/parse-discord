@@ -43,8 +43,8 @@ main_source = r"""
 | \|\|(?<s>.+?)\|\|
 
 # backticks
-| (?<x>`{1,2})(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
 | ```(?:(?<l>[a-zA-Z_\-+.0-9]*)\n)?(?<cb>.+?)```  # codeblock
+| (?<x>`{1,2})(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
 
 # mentions
 | <@!?(?<um>[0-9]+)>
