@@ -21,4 +21,5 @@ autodoc2_packages = ["../../parse_discord"]
 autodoc2_hidden_objects = ["dunder", "private", "undoc"]
 autodoc2_class_docstring = "both"
 autodoc2_render_plugin = "myst"
-autodoc2_module_all_regexes = [r".*\..*"]
+autodoc2_module_all_regexes = [".*\..*"]
+autodoc2_skip_module_regexes = [r".*\.(formatting|string)"]

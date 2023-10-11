@@ -1,3 +1,5 @@
+"""Implementation of `Markup.__str__`. Not exported."""
+
 import regex
 
 from .ast import *
