@@ -28,10 +28,10 @@ class Underscores(unittest.TestCase):
         self.assertEqual(parse(r"_foo\_"), Markup([Text("_foo_")]))
 
     def test_italic_in_underline(self):
-        self.assertEqual(parse("___foo_ bar__ baz"), Markup([Underline(Markup([Italic(Markup([Text("foo")])), Text(" bar")])), Text(" baz")]))
+        self.assertEqual(parse("a ___foo_ bar__ baz"), Markup([Text("a "), Underline(Markup([Italic(Markup([Text("foo")])), Text(" bar")])), Text(" baz")]))
 
     def test_underline_in_italic(self):
-        self.assertEqual(parse("___foo__ bar_ baz"), Markup([Italic(Markup([Underline(Markup([Text("foo")])), Text(" bar")])), Text(" baz")]))
+        self.assertEqual(parse("a ___foo__ bar_ baz"), Markup([Text("a "), Italic(Markup([Underline(Markup([Text("foo")])), Text(" bar")])), Text(" baz")]))
 
     def test_cross_italic_first(self):
         self.assertEqual(parse("_foo __bar_ baz__"), Markup([Italic(Markup([Text("foo __bar")])), Text(" baz__")]))

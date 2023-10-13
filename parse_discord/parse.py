@@ -187,7 +187,7 @@ class Parser:
 
         # bold and underline matches take precedence over shorter italic ones
         if m.group("i"):
-            if nm := bold_underline_compiled.match(self.s, self.i):
+            if nm := bold_underline_compiled.match(self.s, m.start()):
                 if len(range(*nm.span())) > len(range(*m.span())):
                     m = nm
 
