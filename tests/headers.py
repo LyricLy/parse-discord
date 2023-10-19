@@ -33,3 +33,6 @@ class Headers(unittest.TestCase):
 
     def test_strips(self):
         self.assertEqual(parse("#    a #   ####   "), Markup([Header(Markup([Text("a #")]), 1)]))
+
+    def test_newline_start(self):
+        self.assertEqual(parse("#\na"), Markup([Header(Markup([Text("a")]), 1)]))
