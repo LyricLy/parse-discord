@@ -98,3 +98,38 @@ class Lists(unittest.TestCase):
 
     def test_headers_do_not(self):
         self.assertEqual(parse("- # a"), Markup([List(None, [Markup([Text("# a")])])]))
+
+    def test_quotes_work_nested(self):
+        self.assertEqual(
+            parse("1. 1. 1. 1. 1. 1. 1. 1. 1. 1. 1. > a"),
+            Markup([
+                List(1, [Markup([
+                    List(1, [Markup([
+                        List(1, [Markup([
+                            List(1, [Markup([
+                                List(1, [Markup([
+                                    List(1, [Markup([
+                                        List(1, [Markup([
+                                            List(1, [Markup([
+                                                List(1, [Markup([
+                                                    List(1, [Markup([
+                                                        List(1, [Markup([
+                                                            Quote(Markup([
+                                                                Text("a"),
+                                                            ]))
+                                                        ])])
+                                                    ])])
+                                                ])])
+                                            ])])
+                                        ])])
+                                    ])])
+                                ])])
+                            ])])
+                        ])])
+                    ])])
+                ])])
+            ])
+        )
+
+    def test_list_in_quote(self):
+        self.assertEqual(parse("> - a"), Markup([Quote(Markup([List(None, [Markup([Text("a")])])]))]))

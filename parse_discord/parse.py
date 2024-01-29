@@ -238,10 +238,12 @@ class Parser:
 
             return x
 
-        if r := m.captures("q"):
+        # the following rules are optional, so `captures` and `groupdict` shouldn't be used as they might error
+
+        if r := m.capturesdict().get("q"):
             return Quote(self.new_ctx(m, is_quote=True).parse("\n".join(r).rstrip(" ")))
 
-        if r := m.captures("li"):
+        if r := m.capturesdict().get("li"):
             items = []
             bullets = m.captures("lb")
             start = None if bullets[0].strip() in "*-" else min(max(int(bullets[0].split(".")[0]), 1), 1_000_000_000)
@@ -250,7 +252,7 @@ class Parser:
                 items.append(self.new_ctx(m, is_list=True).parse(t))
             return List(start, items)
 
-        if r := m.group("h"):
+        if r := m.groupdict().get("h"):
             title = r.rstrip().rstrip("#").rstrip()
             return Header(self.new_ctx(m).parse(title), len(m.group("ty")))
 
