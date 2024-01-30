@@ -10,6 +10,9 @@ class Backticks(unittest.TestCase):
     def test_empty_inline(self):
         self.assertEqual(parse("``"), Markup([Text("``")]))
 
+    def test_just_space(self):
+        self.assertEqual(parse("` `"), Markup([InlineCode(" ")]))
+
     def test_double_inline(self):
         self.assertEqual(parse("``foo``"), Markup([InlineCode("foo")]))
 

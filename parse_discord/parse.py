@@ -207,9 +207,9 @@ class Parser:
 
         if r := m.group("c"):
             s = r.strip(" ")
-            if s[0] == "`":
+            if s.startswith("`"):
                 r = r.removeprefix(" ")
-            if s[-1] == "`":
+            if s.endswith("`"):
                 r = r.removesuffix(" ")
             return InlineCode(r)
 
