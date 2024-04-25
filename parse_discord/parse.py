@@ -223,8 +223,11 @@ class Parser:
             return UnicodeEmoji(r)
 
         if r := m.group("t"):
-            dt = datetime.datetime.fromtimestamp(int(r), datetime.timezone.utc)
-            return Timestamp(dt, m.group("f") or "f")
+            limit = 8_640_000_000_000
+            timestamp = int(r)
+            if not -limit <= timestamp <= limit:
+                return Text(m[0])
+            return Timestamp(timestamp, m.group("f") or "f")
 
         if r := m.group("hl"):
             if (len(r) - len(r.rstrip(")"))) > r.count("("):

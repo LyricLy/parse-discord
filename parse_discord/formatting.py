@@ -87,7 +87,7 @@ def format_markup(markup: Markup) -> str:
                 out += f"<{symbol}{i}>"
             case Timestamp(t, f):
                 form = f":{f}" * (f != "f")
-                out += f"<t:{t.timestamp():.0f}{form}>"
+                out += f"<t:{t}{form}>"
             case UnicodeEmoji(t):
                 out += t
             case CustomEmoji(i, n, a):

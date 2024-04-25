@@ -251,12 +251,20 @@ class UnicodeEmoji(Node):
 class Timestamp(Node):
     """A timestamp (`<t:1691280044:R>`).
 
-    :ivar datetime.datetime time: The time being referenced as a timezone-aware UTC datetime.
+    :ivar int timestamp: The time being referenced in Unix time.
     :ivar str format: The formatting code, a single character. `f` by default.
     """
 
-    time: datetime.datetime
+    timestamp: int
     format: str
+
+    def as_datetime(self) -> datetime.datetime:
+        """Convert the Timestamp to an aware UTC datetime object.
+
+        This uses {meth}`datetime.datetime.fromtimestamp` internally, which is likely to raise if the timestamp is too large or too small.
+        See that method's documentation for more information.
+        """
+        return datetime.datetime.fromtimestamp(self.timestamp, datetime.timezone.utc)
 
 @dataclass(frozen=True, slots=True)
 class Markup:
