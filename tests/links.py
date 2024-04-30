@@ -32,3 +32,7 @@ class Links(unittest.TestCase):
 
     def test_steam(self):
         self.assertEqual(parse("steam://*a*"), Markup([Text("steam://*a*")]))
+
+    def test_suppressed_bogus(self):
+        self.assertEqual(parse("<blah:/*a*>"), Markup([Text("blah:/*a*")]))
+        self.assertEqual(parse("<blah:*a*>"), Markup([Text("<blah:"), Italic(Markup([Text("a")])), Text(">")]))
