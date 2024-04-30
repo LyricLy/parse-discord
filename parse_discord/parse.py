@@ -37,37 +37,43 @@ main_source = r"""
 | %s
 
 # strikethrough
-| ~~(?<st>.+?)~~(?!_)
+| ~~(?<s>.+?)~~(?!_)
 
 # spoilers
-| \|\|(?<s>.+?)\|\|
+| \|\|(?<S>.+?)\|\|
 
 # backticks
-| ```(?:(?<l>[a-zA-Z_\-+.0-9]*)\n)?(?<cb>.+?)```  # codeblock
+| ```(?:(?<Cl>[a-zA-Z_\-+.0-9]*)\n)?(?<C>.+?)```  # codeblock
 | (?<x>`{1,2})(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
 
 # mentions
 | <@!?(?<um>[0-9]+)>
 | <\#(?<cm>[0-9]+)>
 | <@&(?<rm>[0-9]+)>
-| (?<ev>@everyone)
-| (?<he>@here)
+| (?<em>@everyone)
+| (?<hm>@here)
 
 # emoji
-| <(?<a>a?):(?<n>[a-zA-Z_0-9]+):(?<e>[0-9]+)>
+| <(?<cea>a?):(?<cen>[a-zA-Z_0-9]+):(?<ce>[0-9]+)>
 | (?<ue>%s)  # substituted with emoji_source below
 
 # time
-| <t:(?<t>-?[0-9]+)(?::(?<f>[tTdDfFR]))?>
+| <t:(?<t>-?[0-9]+)(?::(?<tf>[tTdDfFR]))?>
 
 # links
-| (?<hl>(?:https?|steam)://[^\s<]+[^<.,:;"'\]\s])
-| (?<hls>)<(?<hl>[^: >]+:/[^ >]+)>
+| (?<l>(?:https?|steam)://[^\s<]+[^<.,:;"'\]\s])
+| (?<ls>)<(?<l>[^: >]+:/[^ >]+)>
+
+# [text](url "title") links
+#| \[(?<hlb>(?:\[[^\]]*\]|[^\[\]])*[^\[]*)\]  # text part
+#  \(\s*
+#    (?<hls><)?(?<hl>(?:\([^)]*\)|[^\s\\]|\\.)*?)(?<hls>>)?  # url part
+#  \s*\)
 
 # optional rules. we use a custom {{??name ...}} fence for this, handled by the code below.
 
 {{??headers
-| ^(?<ty>\#{1,3})\s+(?!\#)(?<h>[^\n]*)\n?
+| ^(?<hn>\#{1,3})\s+(?!\#)(?<h>[^\n]*)\n?
 }}
 
 {{??quotes
@@ -193,7 +199,7 @@ class Parser:
 
         self.advance(m.start(), m.end())
 
-        for g, ty in [("b", Bold), ("u", Underline), ("i", Italic), ("s", Spoiler), ("st", Strikethrough)]:
+        for g, ty in [("b", Bold), ("u", Underline), ("i", Italic), ("s", Strikethrough), ("S", Spoiler)]:
             if r := m.group(g):
                 return ty(self.new_ctx(m).parse(r))
 
@@ -201,7 +207,7 @@ class Parser:
             if r := m.group(g):
                 return ty(int(r))
 
-        for g, ty in [("ev", Everyone), ("he", Here)]:
+        for g, ty in [("em", Everyone), ("hm", Here)]:
             if r := m.group(g):
                 return ty()
 
@@ -213,11 +219,11 @@ class Parser:
                 r = r.removesuffix(" ")
             return InlineCode(r)
 
-        if r := m.group("cb"):
-            return Codeblock(m.group("l") or None, r.strip("\n"))
+        if r := m.group("C"):
+            return Codeblock(m.group("Cl") or None, r.strip("\n"))
 
-        if r := m.group("e"):
-            return CustomEmoji(int(r), m.group("n"), bool(m.group("a")))
+        if r := m.group("ce"):
+            return CustomEmoji(int(r), m.group("cen"), bool(m.group("cea")))
 
         if r := m.group("ue"):
             return UnicodeEmoji(r)
@@ -227,9 +233,9 @@ class Parser:
             timestamp = int(r)
             if not -limit <= timestamp <= limit:
                 return Text(m[0])
-            return Timestamp(timestamp, m.group("f") or "f")
+            return Timestamp(timestamp, m.group("tf") or "f")
 
-        if r := m.group("hl"):
+        if r := m.group("l"):
             if (len(r) - len(r.rstrip(")"))) > r.count("("):
                 self.i -= 1
                 r = r[:-1]
@@ -237,7 +243,7 @@ class Parser:
             if not URL.can_parse(r) or (u := URL(r)).protocol not in ("http:", "https:", "discord:"):
                 x = Text(r)
             else:
-                x = Link(u, None, None, m.group("hls") is not None)
+                x = Link(u, None, None, m.group("ls") is not None)
 
             return x
 
@@ -257,7 +263,7 @@ class Parser:
 
         if r := m.groupdict().get("h"):
             title = r.rstrip().rstrip("#").rstrip()
-            return Header(self.new_ctx(m).parse(title), len(m.group("ty")))
+            return Header(self.new_ctx(m).parse(title), len(m.group("hn")))
 
         assert False
 
