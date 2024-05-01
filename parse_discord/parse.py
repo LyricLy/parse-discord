@@ -163,14 +163,14 @@ class Context:
         return Parser(r, s, i, self).parse()
 
 class Parser:
-    def __init__(self, regex, s, i, ctx):
+    def __init__(self, regex: str, s: str, i: int, ctx: Context):
         self.regex = regex
         self.s = s
         self.i = i
         self.ctx = ctx
         self.nodes = []
 
-    def advance(self, start, end):
+    def advance(self, start: int, end: int):
         t = self.s[self.i:start]
         self.i = end
         if t:
