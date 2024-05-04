@@ -13,9 +13,12 @@ A parser for Discord's flavour of text markup that aims to be as accurate as pos
 
 ## Completion
 The library is usable in its current state. However, there is work still to be done:
+- Supporting emoji sent in text form
+    - This refers to doing `parse(":smile:")` instead of `parse("😄")` and getting the same result
+    - The Discord client does not produce messages this way and 99.99% of messages from the API will not be in this format
+    - However, bots are technically able to produce it, so we should be able to parse it
 - More ways to manipulate parse trees
 - Guide-level documentation
-- Recognizing `[name](url)` links
 - Recognizing niche features such as slash command references
 
 ## Source

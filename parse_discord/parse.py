@@ -10,9 +10,9 @@ from typing import Generator, Any
 from pathlib import Path
 
 import regex
-from urlstd.parse import URL
 
 from .ast import *
+from .string import text_to_url, clean_whitespace, is_link_admissable
 
 
 __all__ = ("parse",)
@@ -25,10 +25,7 @@ bold_underline_source = r"""
 | __(?<u>(?:\\.|[^\\])+?)__(?!_)  # underline
 """
 
-main_source = r"""
-# skip escapes
-(?:\\.(*SKIP)(*F))?
-
+allowed_in_links_source = r"""
 # italics
   \*(?!\s)(?<i>(?:\\.|\*\*|[^*\\])+?)(?<!\s)\ {0,2}\*(?!\*)
 | _(?<i>(?:\\.|__|[^_\\])+?)_(?![a-zA-Z0-9_])  # (doesn't have the same weird whitespace rules as asterisks)
@@ -43,8 +40,25 @@ main_source = r"""
 | \|\|(?<S>.+?)\|\|
 
 # backticks
-| ```(?:(?<Cl>[a-zA-Z_\-+.0-9]*)\n)?(?<C>.+?)```  # codeblock
-| (?<x>`{1,2})(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
+| (?<x>`+)(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
+
+# emoji
+| <(?<cea>a?):(?<cen>[a-zA-Z_0-9]+):(?<ce>[0-9]+)>
+| (?<ue>%s)  # substituted with emoji_source below
+
+# time
+| <t:(?<t>-?[0-9]+)(?::(?<tf>[tTdDfFR]))?>
+""" % (bold_underline_source, emoji_source)
+
+main_source = r"""
+# skip escapes
+{{??escapes(?:\\.(*SKIP)(*F))?}}
+
+# codeblock
+  ```(?:(?<Cl>[a-zA-Z_\-+.0-9]*)\n)?(?<C>.+?)```
+
+# substituted with allowed_in_links_source below
+| %s
 
 # mentions
 | <@!?(?<um>[0-9]+)>
@@ -53,22 +67,16 @@ main_source = r"""
 | (?<em>@everyone)
 | (?<hm>@here)
 
-# emoji
-| <(?<cea>a?):(?<cen>[a-zA-Z_0-9]+):(?<ce>[0-9]+)>
-| (?<ue>%s)  # substituted with emoji_source below
-
-# time
-| <t:(?<t>-?[0-9]+)(?::(?<tf>[tTdDfFR]))?>
-
 # links
 | (?<l>(?:https?|steam)://[^\s<]+[^<.,:;"'\]\s])
 | (?<ls>)<(?<l>[^: >]+:/[^ >]+)>
 
 # [text](url "title") links
-#| \[(?<hlb>(?:\[[^\]]*\]|[^\[\]])*[^\[]*)\]  # text part
-#  \(\s*
-#    (?<hls><)?(?<hl>(?:\([^)]*\)|[^\s\\]|\\.)*?)(?<hls>>)?  # url part
-#  \s*\)
+| \[(?<Lb>(?:\[[^\]]*\]|[^\[\]])*[^\[]*)\]  # text part
+  \(\s*
+    (?<Ls><)?(?<L>(?:\([^)]*\)|[^\s\\]|\\[^\n])*?)(?<Ls>>)?  # url part
+    (?:\s+['"](?<Lt>.*?)['"])?  # title part
+  \s*\)
 
 # optional rules. we use a custom {{??name ...}} fence for this, handled by the code below.
 
@@ -84,18 +92,19 @@ main_source = r"""
 {{??lists
 | (?<=^\ *)(?:(?<lb>(?:[*-]|\d+\.)\ +)(?<li>.[^\n]*(?:\n\ [^\n]*)*)\n?)+
 }}
-""" % (bold_underline_source, emoji_source)
+""" % (allowed_in_links_source,)
 
 FLAGS = regex.X | regex.S | regex.M | regex.VERSION1
 
 @functools.cache
-def compiled_regex(**kwargs: bool):
+def compiled_regex(**kwargs: bool) -> regex.Pattern:
     s = main_source
     for name, value in kwargs.items():
         s = regex.sub(r"\{\{\?\?%s\b(.*?)}}" % name, r"\1" if value else "", s, flags=regex.S)
     return regex.compile(s, FLAGS)
 
 bold_underline_compiled = regex.compile(bold_underline_source, FLAGS)
+allowed_in_links_compiled = regex.compile(allowed_in_links_source, FLAGS)
 
 class LineStart(Enum):
     NOTHING = 0
@@ -120,14 +129,28 @@ class Context:
         - `TEXT`: The node is in the middle of a line.
     :ivar bool is_quote: Whether the node is inside a quote.
     :ivar int list_depth: The current level of list nesting, from 0 (not in a list) to 11.
+    :ivar bool testing_link: Whether the node is being tested by is_link_admissable.
+    :ivar bool is_link: Whether the node is inside the text part of a [text](url) link.
     """
 
-    def __init__(self, line_start: LineStart = LineStart.NOTHING, is_quote: bool = False, list_depth: int = 0):
+    def __init__(self,
+        line_start: LineStart = LineStart.NOTHING,
+        is_quote: bool = False,
+        list_depth: int = 0,
+        testing_link: bool = False,
+        is_link: bool = False,
+    ):
         self.line_start = line_start
         self.is_quote = is_quote
         self.list_depth = list_depth
+        self.testing_link = testing_link
+        self.is_link = is_link
 
-    def update(self, s: str, m: regex.Match, *, is_quote: bool = False, is_list: bool = False) -> Context:
+    def update(self, s: str, m: regex.Match, *,
+        is_quote: bool = False,
+        is_list: bool = False,
+        testing_link: bool = False,
+    ) -> Context:
         line_start = LineStart.NOTHING
         i = m.start()
         while True:
@@ -141,12 +164,16 @@ class Context:
 
         return Context(
             line_start,
-            # once in a quote, always in a quote
             self.is_quote or is_quote,
             self.list_depth + is_list,
+            self.testing_link or testing_link,
+            self.is_link,
         )
 
     def parse(self, s: str) -> Markup:
+        if self.is_link:
+            return Parser(allowed_in_links_compiled, s, 0, self).parse()
+
         if self.line_start == LineStart.NOTHING:
             start = ""
         elif self.line_start == LineStart.SPACE:
@@ -159,11 +186,12 @@ class Context:
             headers=not self.list_depth,
             quotes=not self.is_quote,
             lists=self.list_depth < 11,
+            escapes=not self.testing_link,
         )
         return Parser(r, s, i, self).parse()
 
 class Parser:
-    def __init__(self, regex: str, s: str, i: int, ctx: Context):
+    def __init__(self, regex: regex.Pattern, s: str, i: int, ctx: Context):
         self.regex = regex
         self.s = s
         self.i = i
@@ -174,18 +202,20 @@ class Parser:
         t = self.s[self.i:start]
         self.i = end
         if t:
-            self.nodes.append(Text(regex.sub(r"(?|\\([^A-Za-z0-9\s])|(¯\\_\(ツ\)_/¯))| +(?=\n)", r"\1", t)))
+            if not (self.ctx.testing_link or self.ctx.is_link):
+                t = regex.sub(r"(?|\\([^A-Za-z0-9\s])|(¯\\_\(ツ\)_/¯))| +(?=\n)", r"\1", t)
+            self.nodes.append(Text(t))
 
     def parse(self) -> Markup:
         while n := self.get_match():
             self.nodes.append(n)
-        self.advance(len(self.s), None)
+        self.advance(len(self.s), 0)
         return Markup(self.nodes)
 
     def new_ctx(self, m: regex.Match, **kwargs) -> Context:
         return self.ctx.update(self.s, m, **kwargs)
 
-    def get_match(self) -> Node:
+    def get_match(self) -> Node | None:
         m = self.regex.search(self.s, self.i)
 
         if m is None:
@@ -204,11 +234,11 @@ class Parser:
                 return ty(self.new_ctx(m).parse(r))
 
         for g, ty in [("um", UserMention), ("cm", ChannelMention), ("rm", RoleMention)]:
-            if r := m.group(g):
+            if r := m.groupdict().get(g):
                 return ty(int(r))
 
         for g, ty in [("em", Everyone), ("hm", Here)]:
-            if r := m.group(g):
+            if r := m.groupdict().get(g):
                 return ty()
 
         if r := m.group("c"):
@@ -217,9 +247,9 @@ class Parser:
                 r = r.removeprefix(" ")
             if s.endswith("`"):
                 r = r.removesuffix(" ")
-            return InlineCode(r)
+            return InlineCode(r) if not self.ctx.testing_link else Style(self.new_ctx(m).parse(r))
 
-        if r := m.group("C"):
+        if r := m.groupdict().get("C"):
             return Codeblock(m.group("Cl") or None, r.strip("\n"))
 
         if r := m.group("ce"):
@@ -235,17 +265,23 @@ class Parser:
                 return Text(m[0])
             return Timestamp(timestamp, m.group("tf") or "f")
 
-        if r := m.group("l"):
+        if r := m.groupdict().get("l"):
             if (len(r) - len(r.rstrip(")"))) > r.count("("):
                 self.i -= 1
                 r = r[:-1]
+            if not (u := text_to_url(r)):
+                return Text(r)
+            return Link(u, None, None, m.group("ls") is not None)
 
-            if not URL.can_parse(r) or (u := URL(r)).protocol not in ("http:", "https:", "discord:"):
-                x = Text(r)
-            else:
-                x = Link(u, None, None, m.group("ls") is not None)
-
-            return x
+        if r := m.groupdict().get("L"):
+            url = text_to_url(r)
+            body = m.group("Lb")
+            title = m.group("Lt")
+            ctx = self.new_ctx(m, testing_link=True)
+            if not url or not is_link_admissable(ctx, body, allow_emoji=False) or title and is_link_admissable(ctx, title, allow_emoji=True) is None:
+                return Text(m[0])
+            inner = Context(is_link=True).parse(clean_whitespace(body))
+            return Link(url, inner, title and clean_whitespace(title), bool(m.captures("Ls")))
 
         # the following rules are optional, so `captures` and `groupdict` shouldn't be used as they might error
 

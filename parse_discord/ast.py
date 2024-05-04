@@ -8,10 +8,13 @@ import regex
 from dataclasses import dataclass
 from typing import Iterator, TYPE_CHECKING
 
-from .string import url_to_text
-
 if TYPE_CHECKING:
     from urlstd.parse import URL
+
+# defer import to prevent circular import between string and ast
+def url_to_text(url: URL) -> str:
+    from .string import url_to_text
+    return url_to_text(url)
 
 
 __all__ = (
