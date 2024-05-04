@@ -131,3 +131,7 @@ class Links(unittest.TestCase):
 
     def test_link_scourge(self):
         self.assertEqual(parse("[\\*[*a\n1. b](https://c)](https://d)"), Markup([u("https://d", inner=Markup([Text("\\"), Italic(Markup([Text("[")])), Text("a\n1. b](https://c)")]))]))
+
+    def test_url_escaping(self):
+        self.assertEqual(parse(r"https://a\$"), Markup([u("https:/a/$")]))
+        self.assertEqual(parse(r"[a](https://b\$)"), Markup([u("https://b$", inner=Markup([Text("a")]))]))

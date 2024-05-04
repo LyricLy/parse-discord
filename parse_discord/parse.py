@@ -274,7 +274,7 @@ class Parser:
             return Link(u, None, None, m.group("ls") is not None)
 
         if r := m.groupdict().get("L"):
-            url = text_to_url(r)
+            url = text_to_url(regex.sub(r"\\([^a-zA-Z0-9\s])", r"\1", r))
             body = m.group("Lb")
             title = m.group("Lt")
             ctx = self.new_ctx(m, testing_link=True)
