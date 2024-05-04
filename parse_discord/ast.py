@@ -114,12 +114,12 @@ class Link(Node):
     """
 
     _url: URL
-    text: Markup | None
+    inner: Markup | None
     title: str | None
     suppressed: bool
 
     def __repr__(self):
-        return f"Link({self.target!r}, text={self.text!r}, title={self.title!r}, suppressed={self.suppressed})"
+        return f"Link({self.target!r}, inner={self.inner!r}, title={self.title!r}, suppressed={self.suppressed})"
 
     @property
     def target(self) -> str:
@@ -139,7 +139,7 @@ class Link(Node):
     @property
     def appearance(self) -> Markup:
         """The appearance of the link before being clicked. Equal to `text or Markup([Text(display_target)])`."""
-        return self.text or Markup([Text(self.display_target)])
+        return self.inner or Markup([Text(self.display_target)])
 
 @dataclass(frozen=True, slots=True)
 class InlineCode(Node):
