@@ -286,7 +286,7 @@ class Parser:
         # the following rules are optional, so `captures` and `groupdict` shouldn't be used as they might error
 
         if r := m.capturesdict().get("q"):
-            return Quote(self.new_ctx(m, is_quote=True).parse("\n".join(r).rstrip(" ")))
+            return Quote(self.new_ctx(m, is_quote=True).parse("\n".join(r)))
 
         if r := m.capturesdict().get("li"):
             items = []
