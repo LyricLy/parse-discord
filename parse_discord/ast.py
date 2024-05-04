@@ -297,6 +297,8 @@ class Markup:
                 case List(_, bs):
                     for b in bs:
                         yield from b.walk()
+                case Link(inner=b) if b is not None:
+                    yield from b.walk()
 
     def __str__(self):
         from .formatting import format_markup
