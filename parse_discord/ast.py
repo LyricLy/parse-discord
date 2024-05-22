@@ -110,7 +110,7 @@ class Link(Node):
     """Hyperlinks (all of `https://example.com`, `<https://example.com>`, `[example](https://example.com)`, and `[example](<https://example.com>)`).
 
     :ivar urlstd.parse.URL _url: The URL referenced by the link. See {attr}`target` and {attr}`display_target`.
-    :ivar Optional[Markup] inner: For `[text](url)` form links, the markup used to display the link. `None` for bare links. See {meth}`appearance`.
+    :ivar Optional[Markup] inner: For `[text](url)` form links, the markup used to display the link. `None` for bare links. See {attr}`appearance`.
     :ivar Optional[str] title: For `[text](url "title")` form links, the title (text shown when the link is hovered over). `None` for other links.
     :ivar bool suppressed: Whether angle brackets were used to stop the link from being embedded.
         Note that the library has no way of knowing if the link was actually embedded or not, as embedding is serverside and outside the scope of the library.
