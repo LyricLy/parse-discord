@@ -55,7 +55,7 @@ main_source = r"""
 {{??escapes(?:\\.(*SKIP)(*F))?}}
 
 # codeblock
-  ```(?:(?<Cl>[a-zA-Z_\-+.0-9]*)\n)?(?<C>.+?)```
+  ```(?:(?<Cl>[a-zA-Z_\-+.0-9]*)\n)?(?<C>.*?[^\n].*?)```
 
 # substituted with allowed_in_links_source below
 | %s
