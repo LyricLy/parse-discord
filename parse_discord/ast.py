@@ -20,7 +20,7 @@ def url_to_text(url: URL) -> str:
 __all__ = (
     "Markup", "Node", "Style",
     "Text", "Bold", "Italic", "Underline", "Spoiler", "Strikethrough",
-    "Quote", "Header", "InlineCode", "Codeblock", "List", "Link",
+    "Quote", "Header", "Subtext", "InlineCode", "Codeblock", "List", "Link",
     "UserMention", "ChannelMention", "RoleMention", "Timestamp",
     "CustomEmoji", "UnicodeEmoji", "Everyone", "Here",
 )
@@ -89,6 +89,10 @@ class Header(Style):
 
     def __repr__(self):
         return f"Header({self.inner!r}, {self.level})"
+
+class Subtext(Style):
+    """Subtext (`-# foo`)."""
+    __slots__ = ()
 
 @dataclass(frozen=True, slots=True)
 class List(Node):

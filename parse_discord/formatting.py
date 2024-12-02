@@ -28,6 +28,8 @@ def format_markup(markup: Markup, *, escapes: bool = True) -> str:
                 out += regex.sub(r"([*_<@:[`\\\p{Emoji_Presentation}]|\|\||~~)", r"\\\1", t) if escapes else t
             case Header(b, n):
                 out += middled(f"{'#'*n} {recur(b)} #\n")
+            case Subtext(b):
+                out += middled(f"-# {recur(b)}\n")
             case Quote(b):
                 out += middled(indent(recur(b), "> "))
             case Style(b):

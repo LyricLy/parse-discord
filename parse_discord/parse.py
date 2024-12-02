@@ -78,6 +78,9 @@ main_source = r"""
     (?:\s+['"](?<Lt>.*?)['"])?  # title part
   \s*\)
 
+# subtext
+| ^-\#\ +(?!-\#)(?<v>[^\n]*)\n?
+
 # optional rules. we use a custom {{??name ...}} fence for this, handled by the code below.
 
 {{??headers
@@ -265,6 +268,9 @@ class Parser:
                 return Text(m[0])
             return Timestamp(timestamp, m.group("tf") or "f")
 
+        if r := m.group("v"):
+            return Subtext(self.new_ctx(m).parse(r))
+
         if r := m.groupdict().get("l"):
             if (len(r) - len(r.rstrip(")"))) > r.count("("):
                 self.i -= 1
@@ -282,8 +288,6 @@ class Parser:
                 return Text(m[0])
             inner = Context(is_link=True).parse(clean_whitespace(body))
             return Link(url, inner, title and clean_whitespace(title), bool(m.captures("Ls")))
-
-        # the following rules are optional, so `captures` and `groupdict` shouldn't be used as they might error
 
         if r := m.capturesdict().get("q"):
             return Quote(self.new_ctx(m, is_quote=True).parse("\n".join(r)))
