@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Iterator, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from urlstd.parse import URL
+    from ada_url import URL
 
 # defer import to prevent circular import between string and ast
 def url_to_text(url: URL) -> str:
@@ -113,7 +113,6 @@ class List(Node):
 class Link(Node):
     """Hyperlinks (all of `https://example.com`, `<https://example.com>`, `[example](https://example.com)`, and `[example](<https://example.com>)`).
 
-    :ivar urlstd.parse.URL _url: The URL referenced by the link. See {attr}`target` and {attr}`display_target`.
     :ivar Optional[Markup] inner: For `[text](url)` form links, the markup used to display the link. `None` for bare links. See {attr}`appearance`.
     :ivar Optional[str] title: For `[text](url "title")` form links, the title (text shown when the link is hovered over). `None` for other links.
     :ivar bool suppressed: Whether angle brackets were used to stop the link from being embedded.
@@ -124,6 +123,11 @@ class Link(Node):
     inner: Markup | None
     title: str | None
     suppressed: bool
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Link):
+            return False
+        return (str(self._url), self.inner, self.title, self.suppressed) == (str(other._url), other.inner, other.title, other.suppressed)
 
     def __repr__(self):
         return f"Link({self.target!r}, inner={self.inner!r}, title={self.title!r}, suppressed={self.suppressed})"

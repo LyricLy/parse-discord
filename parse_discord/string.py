@@ -6,7 +6,7 @@ from typing import Iterator, TYPE_CHECKING
 
 import regex
 
-from urlstd.parse import URL
+from ada_url import URL
 
 from .ast import *
 

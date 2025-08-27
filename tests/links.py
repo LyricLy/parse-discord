@@ -1,6 +1,6 @@
 import unittest
 
-from urlstd.parse import URL
+from ada_url import URL
 
 from parse_discord import *
 
