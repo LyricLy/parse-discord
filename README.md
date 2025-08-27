@@ -17,7 +17,6 @@ The library is usable in its current state. However, there is work still to be d
     - This refers to doing `parse(":smile:")` instead of `parse("😄")` and getting the same result
     - The Discord client does not produce messages this way and 99.99% of messages from the API will not be in this format
     - However, bots are technically able to produce it, so we should be able to parse it
-- More ways to manipulate parse trees
 - Guide-level documentation
 - Recognizing niche features such as slash command references
 

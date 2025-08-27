@@ -6,7 +6,7 @@ import copy
 import datetime
 import regex
 from dataclasses import dataclass
-from typing import Iterator, TYPE_CHECKING
+from typing import Iterator, Iterable, Callable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ada_url import URL
@@ -29,6 +29,43 @@ __all__ = (
 class Node:
     """A base class for all AST nodes."""
     __slots__ = ()
+
+    @property
+    def inners(self) -> list[Markup]:
+        """A list of the node's immediate children as {class}`Markup` objects.
+
+        This is a single-element list for {class}`Style`s, may be any length for {class}`List`s, has 0-1 elements for {class}`Link`s, and has no elements for all other `Node`s.
+        """
+        match self:
+            case Style(b):
+                return [b]
+            case Link(inner=b) if b is not None:
+                return [b]
+            case List(_, bs):
+                return bs
+            case _:
+                return []
+
+    def map(self, f: Callable[[Markup], Markup]) -> Node:
+        """Apply `f` to each immediate child of this `Node`, forming a new object from the results.
+
+        `map` is equivalent to applying `f` to each element of {meth}`inners` and making a `Node` of the same type using the results. For example,
+        if `n = Italic(m)`, then `n.map(f)` is `Italic(f(m))`.
+
+        :param function: A callable to apply to each {class}`Markup`.
+        :return: A new `Node` of the same type as this one, with `f(m)` in the place of each original subtree `m`.
+        """
+        match self:
+            case Header(b, n):
+                return Header(f(b), n)
+            case Style(b):
+                return type(self)(f(b))
+            case Link(u, b, t, s) if b is not None:
+                return Link(u, f(b), t, s)
+            case List(s, bs):
+                return List(s, [f(x) for x in bs])
+            case _:
+                return self
 
 @dataclass(frozen=True, slots=True)
 class Text(Node):
@@ -302,14 +339,35 @@ class Markup:
         """
         for node in self.nodes:
             yield node
-            match node:
-                case Style(b):
-                    yield from b.walk()
-                case List(_, bs):
-                    for b in bs:
-                        yield from b.walk()
-                case Link(inner=b) if b is not None:
-                    yield from b.walk()
+            for inner in node.inners:
+                yield from inner.walk()
+
+    def map(self, f: Callable[[Node], Node]) -> Markup:
+        """Apply `f` to each immediate child of this `Markup`, forming a new object from the results.
+
+        In general, `m.map(f)` is equivalent to `Markup([f(n) for n in m.nodes])`.
+
+        Note that this function only applies to the topmost level of the tree. To descend further, you must do the recursion yourself, probably in tandem with {meth}`Node.map`.
+
+        :param function: A callable to apply to each {class}`Node`.
+        :return: A new `Markup` object with `f(n)` in place of each original node `n`.
+        """
+        return Markup([f(n) for n in self.nodes])
+
+    def flat_map(self, f: Callable[[Node], Iterable[Node]]) -> Markup:
+        """Apply `f` to each immediate child of this `Markup`, concatenating the results into a new object.
+
+        When the function always returns a single-element list, `flat_map` acts like `map`: `m.flat_map(lambda x: [...])` is the same as `m.map(lambda x: ...)`.
+        However, the function is able to return lists of different lengths to remove elements or insert additional ones.
+
+        In general, `m.flat_map(f)` is equivalent to `Markup([x for n in m.nodes for x in f(n)])`.
+
+        Note that this function only applies to the topmost level of the tree. To descend further, you must do the recursion yourself, probably in tandem with {meth}`Node.map`.
+
+        :param function: A callable to apply to each {class}`Node`. This function should return a list or other iterable.
+        :return: A new `Markup` object with the sequence `f(n)` spliced in place of each original node `n`.
+        """
+        return Markup([x for n in self.nodes for x in f(n)])
 
     def __str__(self):
         from .formatting import format_markup
