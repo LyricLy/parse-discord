@@ -7,8 +7,15 @@ class Emoji(unittest.TestCase):
     def test_unicode(self):
         self.assertEqual(parse("🥺"), Markup([UnicodeEmoji("🥺")]))
 
+    def test_unicode_name(self):
+        self.assertEqual(parse(":pleading_face:"), Markup([UnicodeEmoji("🥺")]))
+
     def test_unicode_escape(self):
         self.assertEqual(parse("\🥺"), Markup([Text("🥺")]))
+
+    def test_no_copyright(self):
+        self.assertEqual(parse("©"), Markup([Text("©")]))
+        self.assertEqual(parse(":copyright:"), Markup([Text("©")]))
 
     def test_custom(self):
         self.assertEqual(parse("<:name:0>"), Markup([CustomEmoji(0, "name", False)]))

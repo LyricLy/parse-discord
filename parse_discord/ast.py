@@ -8,6 +8,8 @@ import regex
 from dataclasses import dataclass
 from typing import Iterator, Iterable, Callable, TYPE_CHECKING
 
+from .emoji import names_from_emoji
+
 if TYPE_CHECKING:
     from ada_url import URL
 
@@ -284,13 +286,17 @@ class CustomEmoji(Node):
 class UnicodeEmoji(Node):
     """A Unicode emoji (`🥺`).
 
-    The library might not match the set of emoji supported by Discord, so it may emit `UnicodeEmoji` for emoji not supported
-    by the platform. It also will not emit `UnicodeEmoji` for emoji that were escaped with backslashes.
+    Will not be emitted for emoji that were escaped with backslashes.
 
     :ivar str char: The grapheme corresponding to the emoji. Might be multiple characters.
     """ 
 
     char: str
+
+    @property
+    def names(self):
+        """The names used by Discord for this emoji."""
+        return names_from_emoji(self.char)
 
     def __repr__(self):
         return f"UnicodeEmoji({self.char!r})"

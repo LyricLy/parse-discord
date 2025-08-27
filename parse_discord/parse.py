@@ -13,12 +13,13 @@ import regex
 
 from .ast import *
 from .string import text_to_url, clean_whitespace, is_link_admissable
+from .emoji import emoji_source, emoji_from_name
 
 
 __all__ = ("parse",)
 
-with open(Path(__file__).parent / "emoji.txt") as f:
-    emoji_source = f.read()
+
+EXEMPT_EMOJI = ("™", "™\ufe0f", "©", "©\ufe0f", "®", "®\ufe0f")
 
 bold_underline_source = r"""
  \*\*(?<b>(?:\\.|[^\\])+?)\*\*(?!\*)  # bold
@@ -42,12 +43,13 @@ allowed_in_links_source = r"""
 # backticks
 | (?<x>`+)(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
 
+# time
+| <t:(?<t>-?[0-9]+)(?::(?<tf>[tTdDfFR]))?>
+
 # emoji
 | <(?<cea>a?):(?<cen>[a-zA-Z_0-9]+):(?<ce>[0-9]+)>
 | (?<ue>%s)  # substituted with emoji_source below
-
-# time
-| <t:(?<t>-?[0-9]+)(?::(?<tf>[tTdDfFR]))?>
+| :(?<nue>\w+):
 """ % (bold_underline_source, emoji_source)
 
 main_source = r"""
@@ -258,8 +260,18 @@ class Parser:
         if r := m.group("ce"):
             return CustomEmoji(int(r), m.group("cen"), bool(m.group("cea")))
 
-        if r := m.group("ue"):
+        if (r := m.group("ue")):
+            if r in EXEMPT_EMOJI:
+                return Text(r)
             return UnicodeEmoji(r)
+
+        if r := m.group("nue"):
+            emoji = emoji_from_name(r)
+            if not emoji:
+                return Text(f":{r}:")
+            if emoji in EXEMPT_EMOJI:
+                return Text(emoji)
+            return UnicodeEmoji(emoji)
 
         if r := m.group("t"):
             limit = 8_640_000_000_000
