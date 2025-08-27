@@ -67,7 +67,7 @@ class Node:
             case _:
                 return self
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Text(Node):
     """A leaf node representing plain text without any styling.
 
@@ -79,7 +79,7 @@ class Text(Node):
     def __repr__(self):
         return repr(self.text)
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Style(Node):
     """Base class for elements that contain some other markup and add styling to it.
 
@@ -115,7 +115,7 @@ class Quote(Style):
     """A quote (`> foo`)."""
     __slots__ = ()
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Header(Style):
     """A header (`# foo`).
 
@@ -131,7 +131,7 @@ class Subtext(Style):
     """Subtext (`-# foo`)."""
     __slots__ = ()
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class List(Node):
     """A list, either ordered (`1. a`) or unordered (`- a`).
 
@@ -146,7 +146,7 @@ class List(Node):
     def __repr__(self):
         return f"List({self.start}, {self.items!r})"
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Link(Node):
     """Hyperlinks (all of `https://example.com`, `<https://example.com>`, `[example](https://example.com)`, and `[example](<https://example.com>)`).
 
@@ -189,7 +189,7 @@ class Link(Node):
         """The appearance of the link before being clicked. Equal to `text or Markup([Text(display_target)])`."""
         return self.inner or Markup([Text(self.display_target)])
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class InlineCode(Node):
     """Inline code (`` `foo` ``).
 
@@ -201,7 +201,7 @@ class InlineCode(Node):
     def __repr__(self):
         return f"InlineCode({self.content!r})"
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Codeblock(Node):
     """A codeblock (```` ```foo``` ````).
 
@@ -212,7 +212,7 @@ class Codeblock(Node):
     language: str | None
     content: str
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Mention(Node):
     """Base class for mentions."""
 
@@ -251,7 +251,7 @@ class RoleMention(Mention):
     """
     __slots__ = ()
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Everyone(Node):
     r"""@everyone.
 
@@ -259,7 +259,7 @@ class Everyone(Node):
     prevent the @everyone from being rendered, but the message will still ping people.
     """
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Here(Node):
     r"""@here.
 
@@ -267,7 +267,7 @@ class Here(Node):
     prevent the @here from being rendered, but the message will still ping people.
     """
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class CustomEmoji(Node):
     """A custom emoji (`<:name:0>`).
 
@@ -280,7 +280,7 @@ class CustomEmoji(Node):
     name: str
     animated: bool
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class UnicodeEmoji(Node):
     """A Unicode emoji (`🥺`).
 
@@ -295,7 +295,7 @@ class UnicodeEmoji(Node):
     def __repr__(self):
         return f"UnicodeEmoji({self.char!r})"
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Timestamp(Node):
     """A timestamp (`<t:1691280044:R>`).
 
@@ -314,7 +314,7 @@ class Timestamp(Node):
         """
         return datetime.datetime.fromtimestamp(self.timestamp, datetime.timezone.utc)
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Markup:
     """The main unit of rich text.
 
