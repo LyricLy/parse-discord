@@ -13,6 +13,11 @@ dependencies = [
     "ada_url>=1.26.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "hypothesis",
+]
+
 [project.urls]
 Repository = "https://github.com/LyricLy/parse-discord"
 Documentation = "https://parse-discord.readthedocs.io/"

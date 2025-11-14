@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from .parse import Context
 
 
-def text_to_url(s: str) -> URL | None:
+def text_to_url(s: str, /) -> URL | None:
     """Parse a string as a WHATWG URL, returning None if the URL is invalid or the scheme is not allowed by Discord."""
     if not URL.can_parse(s):
         return None
@@ -23,7 +23,7 @@ def text_to_url(s: str) -> URL | None:
         return None
     return u
 
-def url_to_text(url: URL) -> str:
+def url_to_text(url: URL, /) -> str:
     """Convert a WHATWG URL to a string."""
     if url.origin ==  "null" and url.pathname.startswith("//"):
         s = url.protocol
@@ -38,7 +38,7 @@ bad_whitespace_regex = regex.compile(r"""
 |\N{HANGUL JUNGSEONG FILLER}|\N{HANGUL FILLER}|\N{HALFWIDTH HANGUL FILLER}
 """, regex.VERBOSE)
 
-def clean_whitespace(s: str) -> str:
+def clean_whitespace(s: str, /) -> str:
     """Remove "special" whitespace characters from a string."""
     return bad_whitespace_regex.sub("", s)
 
@@ -52,11 +52,11 @@ confusables = {
 }
 confusable_table = {ord(v): k for k, vs in confusables.items() for v in vs}
 
-def clean_scheme_confusables(s: str) -> str:
+def clean_scheme_confusables(s: str, /) -> str:
     """Replace confusable characters found in HTTP(S) URL schemes with the ASCII equivalents."""
     return s.translate(confusable_table)
 
-def has_special_link(s: str) -> bool:
+def has_special_link(s: str, /) -> bool:
     """Determine if a string contains "special links" such as discord.gg invites.
 
     Special logic is used in Discord to detect these links. As such, they do not need to match the usual URL pattern
@@ -66,8 +66,8 @@ def has_special_link(s: str) -> bool:
     # TODO: fix stub
     return False
 
-def _is_link_admissable(m: Markup, *, allow_emoji: bool) -> bool | None:
-    allowed = [Text, Underline, Bold, Italic, Strikethrough, InlineCode, Spoiler, Timestamp, List, Header, Quote]
+def _is_link_admissable(m: Markup, /, *, allow_emoji: bool) -> bool | None:
+    allowed = [Text, Underline, Bold, Italic, Strikethrough, InlineCode, Spoiler, Timestamp, List, Header, Subtext, Quote]
     if allow_emoji:
         allowed += [UnicodeEmoji, CustomEmoji]
 
@@ -95,7 +95,7 @@ def _is_link_admissable(m: Markup, *, allow_emoji: bool) -> bool | None:
 
     return has_text
 
-def is_link_admissable(ctx: Context, s: str, *, allow_emoji: bool) -> bool | None:
+def is_link_admissable(ctx: Context, s: str, /, *, allow_emoji: bool) -> bool | None:
     """Determine if a string is allowed to be included in a [text](url) link.
 
     Discord contains rudimentary "phishing prevention" designed to prevent the creation of malicious links that

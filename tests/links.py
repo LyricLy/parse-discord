@@ -6,7 +6,7 @@ from parse_discord import *
 
 
 def u(url, inner=None, title=None, suppressed=False):
-    return Link(URL(url), inner, title, suppressed)
+    return Link(url, inner, title, suppressed)
 
 class Links(unittest.TestCase):
     def test_bare(self):
@@ -75,6 +75,7 @@ class Links(unittest.TestCase):
 
     def test_prevents_blocks(self):
         self.assertEqual(parse("[# a](http://b)"), Markup([u("http://b", inner=Markup([Text("# a")]))]))
+        self.assertEqual(parse("[-# a](http://b)"), Markup([u("http://b", inner=Markup([Text("-# a")]))]))
         self.assertEqual(parse("[> a](http://b)"), Markup([u("http://b", inner=Markup([Text("> a")]))]))
         self.assertEqual(parse("[* a](http://b)"), Markup([u("http://b", inner=Markup([Text("* a")]))]))
 
@@ -121,7 +122,8 @@ class Links(unittest.TestCase):
 
         # inline code blocks with more than 2 backticks
         self.assertEqual(parse("[- ```a```](http://b)"), Markup([u("http://b", inner=Markup([Text("- "), InlineCode("a")]))]))
-        self.assertEqual(parse("[- `````a`````](http://b)"), Markup([u("http://b", inner=Markup([Text("- "), InlineCode("a")]))]))
+        self.assertEqual(parse("[- ````` ` `` ``` ```` `````](http://b)"), Markup([u("http://b", inner=Markup([Text("- "), InlineCode("` `` ``` ````")]))]))
+        self.assertEqual(parse("[- ```````](http://b)"), Markup([u("http://b", inner=Markup([Text("- ```````")]))]))
 
         # "links" with formatting in them!
         self.assertEqual(parse("[- https://**a**](http://a)"), Markup([u("http://a", inner=Markup([Text("- https://"), Bold(Markup([Text("a")]))]))]))

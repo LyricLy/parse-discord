@@ -39,3 +39,8 @@ class Quotes(unittest.TestCase):
 
     def test_strip_trailing(self):
         self.assertEqual(parse("_> foo  _\nbar"), Markup([Italic(Markup([Quote(Markup([Text("foo  ")]))])), Text("\nbar")]))
+
+    def test_codeblocks(self):
+        self.assertEqual(parse("> ```a```"), Markup([Quote(Markup([Codeblock(None, "a")]))]))
+        self.assertEqual(parse("> ```\n> a\n> ```"), Markup([Quote(Markup([Codeblock(None, "a")]))]))
+        self.assertEqual(parse("> ```\na\n```"), Markup([Quote(Markup([Text("```")])), Text("a\n```")]))

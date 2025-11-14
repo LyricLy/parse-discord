@@ -27,3 +27,7 @@ class Subtext(unittest.TestCase):
 
     def test_newline_start(self):
         self.assertEqual(parse("-#\na"), Markup([Text("-#\na")]))
+
+    def test_codeblocks(self):
+        self.assertEqual(parse("-# ```a```"), Markup([Subtext(Markup([Codeblock(None, "a")]))]))
+        self.assertEqual(parse("-# ```\na\n```"), Markup([Subtext(Markup([Text("```")])), Text("a\n```")]))

@@ -6,7 +6,7 @@ import copy
 import datetime
 import regex
 from dataclasses import dataclass
-from typing import Iterator, Iterable, Callable, TYPE_CHECKING
+from typing import Self, Iterator, Iterable, Callable, Literal, TYPE_CHECKING
 
 from .emoji import names_from_emoji
 
@@ -14,9 +14,13 @@ if TYPE_CHECKING:
     from ada_url import URL
 
 # defer import to prevent circular import between string and ast
-def url_to_text(url: URL) -> str:
+def url_to_text(url: URL, /) -> str:
     from .string import url_to_text
     return url_to_text(url)
+
+def text_to_url(url: str, /) -> URL | None:
+    from .string import text_to_url
+    return text_to_url(url)
 
 
 __all__ = (
@@ -37,6 +41,7 @@ class Node:
         """A list of the node's immediate children as {class}`Markup` objects.
 
         This is a single-element list for {class}`Style`s, may be any length for {class}`List`s, has 0-1 elements for {class}`Link`s, and has no elements for all other `Node`s.
+        Mutation has no effect on the original object.
         """
         match self:
             case Style(b):
@@ -44,11 +49,11 @@ class Node:
             case Link(inner=b) if b is not None:
                 return [b]
             case List(_, bs):
-                return bs
+                return bs[:]
             case _:
                 return []
 
-    def map(self, f: Callable[[Markup], Markup]) -> Node:
+    def map(self, f: Callable[[Markup], Markup], /) -> Self:
         """Apply `f` to each immediate child of this `Node`, forming a new object from the results.
 
         `map` is equivalent to applying `f` to each element of {meth}`inners` and making a `Node` of the same type using the results. For example,
@@ -59,15 +64,15 @@ class Node:
         """
         match self:
             case Header(b, n):
-                return Header(f(b), n)
+                return type(self)(f(b), n)
             case Style(b):
                 return type(self)(f(b))
-            case Link(u, b, t, s) if b is not None:
-                return Link(u, f(b), t, s)
+            case Link(_url=u, inner=b, title=t, suppressed=s) if b is not None:
+                return type(self)._from_ada_url(u, f(b), t, s)
             case List(s, bs):
-                return List(s, [f(x) for x in bs])
+                return type(self)(s, [f(x) for x in bs])
             case _:
-                return self
+                return copy.copy(self)
 
 @dataclass(slots=True)
 class Text(Node):
@@ -124,7 +129,7 @@ class Header(Style):
     :ivar int level: The level of the header (is it `#`, `##`, or `###`)?
     """
 
-    level: int
+    level: Literal[1, 2, 3]
 
     def __repr__(self):
         return f"Header({self.inner!r}, {self.level})"
@@ -148,33 +153,55 @@ class List(Node):
     def __repr__(self):
         return f"List({self.start}, {self.items!r})"
 
-@dataclass(slots=True)
+@dataclass(init=False)
 class Link(Node):
     """Hyperlinks (all of `https://example.com`, `<https://example.com>`, `[example](https://example.com)`, and `[example](<https://example.com>)`).
 
+    The `target` field is implemented as a descriptor. Attempting to initialize or set it to an invalid URL will raise a `ValueError`.
+
+    :ivar str target: The URL one is sent to after clicking the link. Equivalent (but not necessarily equal) to the source URL.
     :ivar Optional[Markup] inner: For `[text](url)` form links, the markup used to display the link. `None` for bare links. See {attr}`appearance`.
     :ivar Optional[str] title: For `[text](url "title")` form links, the title (text shown when the link is hovered over). `None` for other links.
     :ivar bool suppressed: Whether angle brackets were used to stop the link from being embedded.
         Note that the library has no way of knowing if the link was actually embedded or not, as embedding is serverside and outside the scope of the library.
     """
 
-    _url: URL
+    __slots__ = ("_url", "inner", "title", "suppressed")
+
+    target: str  # type: ignore
     inner: Markup | None
     title: str | None
     suppressed: bool
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Link):
-            return False
-        return (str(self._url), self.inner, self.title, self.suppressed) == (str(other._url), other.inner, other.title, other.suppressed)
+    # exactly what dataclass would have generated, but we have to do this to stop it from mistaking `target` for having a default
+    def __init__(self, target: str, inner: Markup | None, title: str | None, suppressed: bool) -> None:
+        self.target = target
+        self.inner = inner
+        self.title = title
+        self.suppressed = suppressed
+
+    @classmethod
+    def _from_ada_url(cls, url: URL, inner: Markup | None, title: str | None, suppressed: bool) -> Self:
+        us = cls.__new__(cls)
+        us._url = url
+        us.inner = inner
+        us.title = title
+        us.suppressed = suppressed
+        return us
 
     def __repr__(self):
         return f"Link({self.target!r}, inner={self.inner!r}, title={self.title!r}, suppressed={self.suppressed})"
 
     @property
     def target(self) -> str:
-        """The URL one is sent to after clicking the link. Equivalent (but not necessarily equal) to the source URL."""
         return url_to_text(self._url)
+
+    @target.setter
+    def target(self, text: str, /) -> None:
+        url = text_to_url(text)
+        if not url:
+            raise ValueError(f"invalid target URL '{text}'")
+        self._url = url
 
     @property
     def display_target(self) -> str:
@@ -294,7 +321,7 @@ class UnicodeEmoji(Node):
     char: str
 
     @property
-    def names(self):
+    def names(self) -> list[str]:
         """The names used by Discord for this emoji."""
         return names_from_emoji(self.char)
 
@@ -313,7 +340,7 @@ class Timestamp(Node):
     format: str
 
     def as_datetime(self) -> datetime.datetime:
-        """Convert the Timestamp to an aware UTC datetime object.
+        """Convert this `Timestamp` to an aware UTC datetime object.
 
         This uses {meth}`datetime.datetime.fromtimestamp` internally, which is likely to raise if the timestamp is too large or too small.
         See that method's documentation for more information.
@@ -348,7 +375,7 @@ class Markup:
             for inner in node.inners:
                 yield from inner.walk()
 
-    def map(self, f: Callable[[Node], Node]) -> Markup:
+    def map(self, f: Callable[[Node], Node], /) -> Markup:
         """Apply `f` to each immediate child of this `Markup`, forming a new object from the results.
 
         In general, `m.map(f)` is equivalent to `Markup([f(n) for n in m.nodes])`.
@@ -360,11 +387,11 @@ class Markup:
         """
         return Markup([f(n) for n in self.nodes])
 
-    def flat_map(self, f: Callable[[Node], Iterable[Node]]) -> Markup:
+    def flat_map(self, f: Callable[[Node], Iterable[Node]], /) -> Markup:
         """Apply `f` to each immediate child of this `Markup`, concatenating the results into a new object.
 
-        When the function always returns a single-element list, `flat_map` acts like `map`: `m.flat_map(lambda x: [...])` is the same as `m.map(lambda x: ...)`.
-        However, the function is able to return lists of different lengths to remove elements or insert additional ones.
+        When the function always returns a single element, `flat_map` acts like `map`: `m.flat_map(lambda x: [...])` is the same as `m.map(lambda x: ...)`.
+        However, the function is able to return fewer or greater items to remove elements or insert additional ones.
 
         In general, `m.flat_map(f)` is equivalent to `Markup([x for n in m.nodes for x in f(n)])`.
 
@@ -375,9 +402,52 @@ class Markup:
         """
         return Markup([x for n in self.nodes for x in f(n)])
 
+    def normal_form(self) -> Markup:
+        """Find the closest-looking equivalent of this `Markup` that can be represented in text, returning a new `Markup`.
+
+        ```{note}
+        Most users will never need to call this method. The implementation of `__str__` for `Markup` already uses it internally.
+        ```
+
+        Not every `Markup` can be represented as a string that will parse to the same tree. For example, consider this value:
+        ```
+        touching_bolds = Markup([
+            Bold(Markup([
+                Text("a"),
+            ])),
+            Bold(Markup([
+                Text("b"),
+            ])),
+        ])
+        ```
+
+        There is no way to perfectly represent `touching_bolds` as a formatted string, because it has two `Bold` nodes next to each other.
+        `touching_bolds.reduced()` evaluates to this tree, which is visually identical and *is* representable:
+        ```
+        Markup([
+            Bold(Markup([
+                Text("ab"),
+            ]))
+        ])
+        ```
+
+        ```{warning}
+        There are a great number of edge cases in the body of [text](url) links that have no reasonable way to normalize them, as syntax is extremely limited there (even escaping is not allowed).
+        The library makes only a limited attempt to deal with these cases, so there is no guarantee that `Link` nodes where `inner` is not `None` will be formatted correctly.
+        ```
+
+        The return value may not be an entirely separate object. If `y = x.normalize()`, then mutating any part of `y` may affect `x`, even if `x is not y`.
+        The result of `normalize` should be deep copied before mutating it, unless the original object is never accessed afterwards.
+        """
+        from .formatting import normalize_markup
+        return normalize_markup(self)
+
+    def __bool__(self):
+        return bool(self.normal_form().nodes)
+
     def __str__(self):
         from .formatting import format_markup
-        return format_markup(self)
+        return format_markup(self.normal_form())
 
     def __repr__(self):
         return f"<{', '.join(map(repr, self.nodes))}>"

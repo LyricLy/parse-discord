@@ -1,5 +1,5 @@
-sphinx==7.3.7
-furo==2024.1.29
+sphinx==8.2.3
+furo==2025.7.19
 readthedocs-sphinx-search==0.3.2
-myst-parser==3.0.0
+myst-parser==4.0.1
 sphinx-autodoc2==0.5.0

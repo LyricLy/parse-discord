@@ -11,7 +11,7 @@ with open(Path(__file__).parent / "emoji.json") as f:
 
 _by_name = {name: emoji for emoji, names in _emoji.items() for name in names}
 
-def _build_regex(lexicon):
+def _build_regex(lexicon: list[str]) -> str:
     if len(lexicon) == 1:
         return lexicon[0]
     starts = defaultdict(list)
@@ -36,11 +36,10 @@ def _build_regex(lexicon):
 
 
 emoji_source = _build_regex(_emoji)
-emoji_name_source = _build_regex(_by_name)
 
-def names_from_emoji(char: str) -> list[str] | None:
-    """The names `char` has as an emoji on Discord, or None if it is not one."""
-    return _emoji.get(char)
+def names_from_emoji(char: str) -> list[str]:
+    """The names `char` has as an emoji on Discord."""
+    return _emoji[char]
 
 def emoji_from_name(name: str) -> str | None:
     """The emoji corresponding to `name` on Discord, or None if there is none."""

@@ -14,6 +14,7 @@ import regex
 from .ast import *
 from .string import text_to_url, clean_whitespace, is_link_admissable
 from .emoji import emoji_source, emoji_from_name
+from . import limits
 
 
 __all__ = ("parse",)
@@ -40,8 +41,8 @@ allowed_in_links_source = r"""
 # spoilers
 | \|\|(?<S>.+?)\|\|
 
-# backticks
-| (?<x>`+)(?<c>.+?)(?<!`)\g<x>(?!`)  # inline code
+# inline code
+| (?<x>`+)(?<c>.+?)(?<!`)\g<x>(?!`)
 
 # time
 | <t:(?<t>-?[0-9]+)(?::(?<tf>[tTdDfFR]))?>
@@ -81,7 +82,7 @@ main_source = r"""
   \s*\)
 
 # subtext
-| ^-\#\ +(?!-\#)(?<v>[^\n]*)\n?
+| ^-\#\ +(?!-\#)(?<v>[^\n]+)\n?
 
 # optional rules. we use a custom {{??name ...}} fence for this, handled by the code below.
 
@@ -144,14 +145,14 @@ class Context:
         list_depth: int = 0,
         testing_link: bool = False,
         is_link: bool = False,
-    ):
+    ) -> None:
         self.line_start = line_start
         self.is_quote = is_quote
         self.list_depth = list_depth
         self.testing_link = testing_link
         self.is_link = is_link
 
-    def update(self, s: str, m: regex.Match, *,
+    def update(self, s: str, m: regex.Match, /, *,
         is_quote: bool = False,
         is_list: bool = False,
         testing_link: bool = False,
@@ -175,7 +176,7 @@ class Context:
             self.is_link,
         )
 
-    def parse(self, s: str) -> Markup:
+    def parse(self, s: str, /) -> Markup:
         if self.is_link:
             return Parser(allowed_in_links_compiled, s, 0, self).parse()
 
@@ -196,28 +197,37 @@ class Context:
         return Parser(r, s, i, self).parse()
 
 class Parser:
-    def __init__(self, regex: regex.Pattern, s: str, i: int, ctx: Context):
+    def __init__(self, regex: regex.Pattern, s: str, i: int, ctx: Context, /) -> None:
         self.regex = regex
         self.s = s
         self.i = i
         self.ctx = ctx
         self.nodes = []
 
-    def advance(self, start: int, end: int):
+    def append_text(self, s: str, /) -> None:
+        if self.nodes and isinstance(self.nodes[-1], Text):
+            self.nodes[-1].text += s
+        else:
+            self.nodes.append(Text(s))
+
+    def advance(self, start: int, end: int, /) -> None:
         t = self.s[self.i:start]
         self.i = end
         if t:
             if not (self.ctx.testing_link or self.ctx.is_link):
                 t = regex.sub(r"(?|\\([^A-Za-z0-9\s])|(¯\\_\(ツ\)_/¯))| +(?=\n)", r"\1", t)
-            self.nodes.append(Text(t))
+            self.append_text(t)
 
     def parse(self) -> Markup:
         while n := self.get_match():
-            self.nodes.append(n)
+            if isinstance(n, Text):
+                self.append_text(n.text)
+            else:
+                self.nodes.append(n)
         self.advance(len(self.s), 0)
         return Markup(self.nodes)
 
-    def new_ctx(self, m: regex.Match, **kwargs) -> Context:
+    def new_ctx(self, m: regex.Match, /, **kwargs) -> Context:
         return self.ctx.update(self.s, m, **kwargs)
 
     def get_match(self) -> Node | None:
@@ -274,9 +284,8 @@ class Parser:
             return UnicodeEmoji(emoji)
 
         if r := m.group("t"):
-            limit = 8_640_000_000_000
             timestamp = int(r)
-            if not -limit <= timestamp <= limit:
+            if not limits.MIN_TIMESTAMP <= timestamp <= limits.MAX_TIMESTAMP:
                 return Text(m[0])
             return Timestamp(timestamp, m.group("tf") or "f")
 
@@ -289,7 +298,7 @@ class Parser:
                 r = r[:-1]
             if not (u := text_to_url(r)):
                 return Text(r)
-            return Link(u, None, None, m.group("ls") is not None)
+            return Link._from_ada_url(u, None, None, m.group("ls") is not None)
 
         if r := m.groupdict().get("L"):
             url = text_to_url(regex.sub(r"\\([^a-zA-Z0-9\s])", r"\1", r))
@@ -299,7 +308,7 @@ class Parser:
             if not url or not is_link_admissable(ctx, body, allow_emoji=False) or title and is_link_admissable(ctx, title, allow_emoji=True) is None:
                 return Text(m[0])
             inner = Context(is_link=True).parse(clean_whitespace(body))
-            return Link(url, inner, title and clean_whitespace(title), bool(m.captures("Ls")))
+            return Link._from_ada_url(url, inner, title and clean_whitespace(title), bool(m.captures("Ls")))
 
         if r := m.capturesdict().get("q"):
             return Quote(self.new_ctx(m, is_quote=True).parse("\n".join(r)))
@@ -307,7 +316,7 @@ class Parser:
         if r := m.capturesdict().get("li"):
             items = []
             bullets = m.captures("lb")
-            start = None if bullets[0].strip() in "*-" else min(max(int(bullets[0].split(".")[0]), 1), 1_000_000_000)
+            start = None if bullets[0].strip() in "*-" else min(max(int(bullets[0].split(".")[0]), 1), limits.MAX_LIST_INDEX)
             for bullet, item in zip(bullets, r):
                 t = regex.sub("^ {1,%d}" % len(bullet), "", item, flags=regex.M)
                 items.append(self.new_ctx(m, is_list=True).parse(t))
@@ -315,7 +324,9 @@ class Parser:
 
         if r := m.groupdict().get("h"):
             title = r.rstrip().rstrip("#").rstrip()
-            return Header(self.new_ctx(m).parse(title), len(m.group("hn")))
+            level = len(m.group("hn"))
+            assert level in (1, 2, 3)
+            return Header(self.new_ctx(m).parse(title), level)
 
         assert False
 
