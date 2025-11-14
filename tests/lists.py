@@ -18,7 +18,7 @@ class Lists(unittest.TestCase):
         self.assertEqual(parse("1000000001. foo"), Markup([List(1000000000, [Markup([Text("foo")])])]))
 
     def test_indent(self):
-        self.assertEqual(parse("- a\n b"), Markup([List(None, [Markup([Text("a\nb")])])]))
+        self.assertEqual(parse("- a\n b"), Markup([List(None, [Markup([Text("a")])]), Text("b")]))
         self.assertEqual(parse("- a\n   b"), Markup([List(None, [Markup([Text("a\n b")])])]))
         self.assertEqual(parse("1. a\n   b"), Markup([List(1, [Markup([Text("a\nb")])])]))
         self.assertEqual(parse("1. a\n    b"), Markup([List(1, [Markup([Text("a\n b")])])]))
@@ -26,6 +26,9 @@ class Lists(unittest.TestCase):
 
     def test_null_grab(self):
         self.assertEqual(parse("* \na"), Markup([List(None, [Markup([Text("\na")])])]))
+
+    def test_anti_grab(self):
+        self.assertEqual(parse("* \n* b"), Markup([List(None, [Markup([]), Markup([Text("b")])])]))
 
     def test_nesting(self):
         self.assertEqual(
@@ -70,9 +73,9 @@ class Lists(unittest.TestCase):
                         Text("a\n"),
                         List(2, [
                             Markup([Text("b")]), 
-                            Markup([Text("c")]),
                         ]),
                     ]),
+                    Markup([Text("c")]),
                     Markup([Text("d")]),
                 ]),
             ]),
