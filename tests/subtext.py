@@ -31,3 +31,6 @@ class Subtext(unittest.TestCase):
     def test_codeblocks(self):
         self.assertEqual(parse("-# ```a```"), Markup([Subtext(Markup([Codeblock(None, "a")]))]))
         self.assertEqual(parse("-# ```\na\n```"), Markup([Subtext(Markup([Text("```")])), Text("a\n```")]))
+
+    def test_strips(self):
+        self.assertEqual(parse("-#    a   \N{IDEOGRAPHIC SPACE}"), Markup([Subtext(Markup([Text("a #")]))]))

@@ -87,7 +87,7 @@ main_source = r"""
 # optional rules. we use a custom {{??name ...}} fence for this, handled by the code below.
 
 {{??headers
-| ^(?<hn>\#{1,3})\s+(?!\#)(?<h>[^\n]*)\n?
+| ^(?<hn>\#{1,3})\s+(?!\#)(?<h>[^\n]*)\s*#*\s*\n?
 }}
 
 {{??quotes
@@ -136,6 +136,7 @@ class Context:
         - `NOTHING`: This is the start of the line.
         - `SPACE`: There are only spaces preceding the node.
         - `TEXT`: The node is in the middle of a line.
+    :ivar bool trailing_newline: Whether a newline immediately follows the input.
     :ivar bool is_quote: Whether the node is inside a quote.
     :ivar int list_depth: The current level of list nesting, from 0 (not in a list) to 11.
     :ivar bool testing_link: Whether the node is being tested by is_link_admissable.
@@ -144,12 +145,14 @@ class Context:
 
     def __init__(self,
         line_start: LineStart = LineStart.NOTHING,
+        trailing_newline: bool = False,
         is_quote: bool = False,
         list_depth: int = 0,
         testing_link: bool = False,
         is_link: bool = False,
     ) -> None:
         self.line_start = line_start
+        self.trailing_newline = trailing_newline
         self.is_quote = is_quote
         self.list_depth = list_depth
         self.testing_link = testing_link
@@ -173,6 +176,7 @@ class Context:
 
         return Context(
             line_start,
+            m[0].endswith("\n"),
             self.is_quote or is_quote,
             self.list_depth + is_list,
             self.testing_link or testing_link,
@@ -215,11 +219,15 @@ class Parser:
 
     def advance(self, start: int, end: int, /) -> None:
         t = self.s[self.i:start]
+        if added_newline := self.ctx.trailing_newline and start == len(self.s):
+            t += "\n"
         self.i = end
         if t:
-            if not (self.ctx.testing_link or self.ctx.is_link):
+            if self.ctx.testing_link or self.ctx.is_link:
+                t = regex.sub(r" +(?=\n)", r"\1", t)
+            else:
                 t = regex.sub(r"(?|\\([^A-Za-z0-9\s])|(¯\\_\(ツ\)_/¯))| +(?=\n)", r"\1", t)
-            self.append_text(t)
+            self.append_text(t if not added_newline else t[:-1])
 
     def parse(self) -> Markup:
         while n := self.get_match():
@@ -293,7 +301,7 @@ class Parser:
             return Timestamp(timestamp, m.group("tf") or "f")
 
         if r := m.group("v"):
-            return Subtext(self.new_ctx(m).parse(r))
+            return Subtext(self.new_ctx(m).parse(r.rstrip()))
 
         if r := m.groupdict().get("l"):
             if (len(r) - len(r.rstrip(")"))) > r.count("("):

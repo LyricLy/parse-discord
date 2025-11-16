@@ -44,3 +44,6 @@ class Quotes(unittest.TestCase):
         self.assertEqual(parse("> ```a```"), Markup([Quote(Markup([Codeblock(None, "a")]))]))
         self.assertEqual(parse("> ```\n> a\n> ```"), Markup([Quote(Markup([Codeblock(None, "a")]))]))
         self.assertEqual(parse("> ```\na\n```"), Markup([Quote(Markup([Text("```")])), Text("a\n```")]))
+
+    def test_strip_passthrough(self):
+        self.assertEqual(parse("> a\N{IDEOGRAPHIC SPACE} \n"), Markup([Quote(Markup([Text("a\N{IDEOGRAPHIC SPACE}")]))]))

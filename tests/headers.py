@@ -13,6 +13,9 @@ class Headers(unittest.TestCase):
     def test_h3(self):
         self.assertEqual(parse("### foo"), Markup([Header(Markup([Text("foo")]), 3)]))
 
+    def test_no_h4(self):
+        self.assertEqual(parse("#### foo"), Markup([Text("#### foo")]))
+
     def test_newline_ends(self):
         self.assertEqual(parse("# foo\ning"), Markup([Header(Markup([Text("foo")]), 1), Text("ing")]))
 
@@ -33,6 +36,7 @@ class Headers(unittest.TestCase):
 
     def test_strips(self):
         self.assertEqual(parse("#    a #   ####   "), Markup([Header(Markup([Text("a #")]), 1)]))
+        self.assertEqual(parse("# a \N{IDEOGRAPHIC SPACE}"), Markup([Header(Markup([Text("a")]), 1)]))
 
     def test_newline_start(self):
         self.assertEqual(parse("#\na"), Markup([Header(Markup([Text("a")]), 1)]))

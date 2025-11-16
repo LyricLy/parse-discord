@@ -136,3 +136,6 @@ class Lists(unittest.TestCase):
 
     def test_list_in_quote(self):
         self.assertEqual(parse("> - a"), Markup([Quote(Markup([List(None, [Markup([Text("a")])])]))]))
+
+    def test_strip_passthrough(self):
+        self.assertEqual(parse("- a\N{IDEOGRAPHIC SPACE} \n"), Markup([List(None, [Markup([Text("a\N{IDEOGRAPHIC SPACE}")])])]))
