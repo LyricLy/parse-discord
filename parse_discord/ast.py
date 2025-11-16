@@ -440,7 +440,7 @@ class Markup:
         The result of `normalize` should be deep copied before mutating it, unless the original object is never accessed afterwards.
         """
         from .formatting import normalize_markup
-        return normalize_markup(self)
+        return normalize_markup(self, clean=set())
 
     def __bool__(self):
         return bool(self.normal_form().nodes)

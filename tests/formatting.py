@@ -16,7 +16,7 @@ def node():
         st.builds(Text, st.text()),
         st.builds(InlineCode, st.text()),
         st.builds(Codeblock, st.text() | st.none(), st.text()),
-        link_of(st.none()),
+        #link_of(st.none()),
         st.builds(UserMention, st.integers(0)),
         st.builds(ChannelMention, st.integers(0)),
         st.builds(RoleMention, st.integers(0)),

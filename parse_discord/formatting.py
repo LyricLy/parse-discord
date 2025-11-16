@@ -40,28 +40,31 @@ def append_node(nodes: list[Node], node: Node) -> None:
             nodes.append(Text(" "))
             nodes.append(node)
         # pattern continues where it's easier to list ok cases than bad ones
-        case (Text(t), Quote()) if t.endswith(("\n", " ")):
+        case (Text(t), List() | Quote()) if t.endswith(("\n", " ")):
             nodes.append(node)
         case (Text(t), Subtext() | Header()) if t.endswith("\n"):
             nodes.append(node)
-        case (Quote() | Subtext() | Header(), Quote() | Subtext() | Header()):
+        case (List() | Quote() | Subtext() | Header(), List() | Quote() | Subtext() | Header()) if not isinstance(node, Quote) or not isinstance(nodes[-1], Quote):
             nodes.append(node)
-        case (_, Quote() | Subtext() | Header()):
-            nodes.append(Text("\n"))
+        case (b4, List() | Quote() | Subtext() | Header()):
+            if isinstance(b4, Text):
+                nodes[-1] = Text(b4.text + "\n")
+            else:
+                nodes.append(Text("\n"))
             nodes.append(node)
         case _:
             nodes.append(node)
+
+def extend_nodes(xs: list[Node], ys: list[Node]) -> None:
+    append_node(xs, ys[0])
+    xs.extend(ys[1:])
 
 def cat_nodes(xs: list[Node], ys: list[Node]) -> list[Node]:
     if not ys:
         return xs
     new = xs[:]
-    append_node(new, ys[0])
-    new.extend(ys[1:])
+    extend_nodes(new, ys)
     return new
-
-def clean(markup: Markup, what: type[Style]) -> Markup:
-    return markup.flat_map(lambda node: node.inner.nodes if isinstance(node, what) else [node.map(lambda i: clean(i, what))])
 
 def one_line(codeblock: Codeblock) -> bool:
     return not codeblock.language and "\n" not in codeblock.content and not codeblock.content.endswith("`")
@@ -95,80 +98,70 @@ def lines(markup: Markup) -> list[Markup]:
                 node_lines = [Markup([Link._from_ada_url(u, x, t, s)]) for x in lines(b)]
             case List(n, xs):
                 node_lines = [y for i, x in enumerate(xs) for l in [lines(x)] for y in [Markup([List(None if n is None else n + i, [l[0]])]), *l[1:]]]
+                node_lines.append(Markup([]))
             case _:
                 node_lines = [Markup([node])]
 
         r[-1].nodes.extend(node_lines[0].nodes)
         r.extend(node_lines[1:])
 
-    if not r[-1]:
-        r.pop()
     return r
 
-def normalize_markup(markup: Markup) -> Markup:
+def normalize_markup(markup: Markup, *, clean: set[type[Style]]) -> Markup:
     nodes = []
 
-    for node in markup.nodes:
-        match node.map(normalize_markup):
-            case Text("") | InlineCode("") | Codeblock("", _) | Codeblock(_, "") | Style(Markup([])) | Link(inner=Markup([])) if not isinstance(node, Quote):
+    for node in [y for x in markup.nodes for y in (x.inner.nodes if isinstance(x, tuple(clean)) else [x])]:
+        match node.map(lambda n, clean=clean | {type(node)} if isinstance(node, Style) else clean: normalize_markup(n, clean=clean)):
+            case Text("") | InlineCode("") | Style(Markup([])) | Link(inner=Markup([])) if not isinstance(node, Quote):
                 continue
             case List(_, xs) if all(not x.nodes for x in xs):
                 continue
-            case Codeblock(l, c) if l is not None and not regex.fullmatch(r"[a-zA-Z_\-+.0-9]*", l):
-                node = Codeblock(None, c)
+            case Codeblock(l, c):
+                if l is not None and not regex.fullmatch(r"[a-zA-Z_\-+.0-9]+", l):
+                    l = None
+                node = Codeblock(l, " "*c.startswith("\n") + (c or " ") + " "*c.endswith("\n"))
             case CustomEmoji(i, n, a):
                 # name doesn't really matter so just mangle it, we can still display if the rest is ok
                 node = CustomEmoji(i, regex.sub(r"[^a-zA-Z_0-9]+", "", n) or "blank", a)
             case Timestamp(t, f):
                 node = Timestamp(min(max(t, limits.MIN_TIMESTAMP), limits.MAX_TIMESTAMP), f if f in ("t", "T", "d", "D", "f", "F", "R") else "f")
-            case Link(target=u, inner=b, title=t, suppressed=s):
-                if b is None or t == "":
-                    t = None
-                if b is None:
-                    if u.endswith(("<", ".", ",", ":", ";", '"', "'", "]")) or len(u)-len(u.rstrip(")")) > u.count("("):
-                        u = f"{u[:-1]}%{ord(u[-1]):02X}"
-                else:
-                    safe = False
-                    new_you = ""
-                    for c in u:
-                        if c == "(":
-                            safe = True
-                        elif c == ")" and safe:
-                            safe = False
-                        elif c == ")":
-                            new_you += "%29"
-                        else:
-                            new_you += c
-                    u = new_you
-                node = Link(u, b, t, s)
+            case Link(_url=u, inner=b, title="", suppressed=s) | Link(_url=u, inner=None as b, suppressed=s):
+                node = Link._from_ada_url(u, b, None, s)
             case List(n, xs) if n is not None:
                 node = List(min(max(n, 1), limits.MAX_LIST_INDEX), xs)
             case Header(inner, l):
-                for line in lines(clean(inner, Header)):
-                    match line:
-                        case Markup([Codeblock() as c]) if not one_line(c):
-                            append_node(nodes, c)
-                        case _:
-                            append_node(nodes, Header(line, l))
+                ls = lines(inner)
+                if not ls[-1].nodes:
+                    ls.pop()
+                for line in ls:
+                    if not line:
+                        append_node(nodes, Text("\n"))
+                    elif any([isinstance(x, Codeblock) and not one_line(x) for x in line.walk()]):
+                        extend_nodes(nodes, line.nodes)
+                    else:
+                        append_node(nodes, Header(line, l))
                 continue
             case Subtext(inner):
-                for line in lines(clean(inner, Subtext)):
-                    match line:
-                        case Markup([]):
-                            append_node(nodes, Text("\n"))
-                        case Markup([Codeblock() as c]) if not one_line(c):
-                            append_node(nodes, c)
-                        case _:
-                            append_node(nodes, Subtext(line))
+                ls = lines(inner)
+                if not ls[-1].nodes:
+                    ls.pop()
+                for line in ls:
+                    if not line:
+                        append_node(nodes, Text("\n"))
+                    elif any([isinstance(x, Codeblock) and not one_line(x) for x in line.walk()]):
+                        extend_nodes(nodes, line.nodes)
+                    else:
+                        append_node(nodes, Subtext(line))
                 continue
-            case Style(inner) as node:
-                node = type(node)(clean(inner, type(node)))
             case node:
                 pass
         append_node(nodes, node)
 
     return Markup(nodes)
 
+
+PERCENT_TRANSLATION = str.maketrans({"_": "%5F", "*": "%2A", "|": "%7C", "~": "%7E", "<": "%3C"})
+END_PERCENT_TRANSLATION = {".": "%2E", ",": "%2C", ":": "%3A", ";": "%3B", '"': "%22", "'": "%27", "]": "%5D"}
 
 def indent(m: str, w: str) -> str:
     return "".join(f"{w}{x}\n" for x in m.split("\n"))
@@ -189,7 +182,7 @@ def format_markup(markup: Markup, *, escapes: bool = True) -> str:
         match node:
             case Text(t):
                 # when inside a [text](url) link (escapes = False), escapes don't work at all, so don't insert them
-                out += regex.sub(r"([*_<@:[`\\\p{Emoji_Presentation}]|\|\||~~)", r"\\\1", t) if escapes else t
+                out += regex.sub(r"([*_<:[`\\\p{Emoji_Presentation}]|@(?:here|everyone)|\|\||~~)", r"\\\1", t) if escapes else t
             case Header(b, n):
                 out += middled(f"{'#'*n} {recur(b)} #\n")
             case Subtext(b):
@@ -211,10 +204,14 @@ def format_markup(markup: Markup, *, escapes: bool = True) -> str:
                                 outer = "*"
                             case (Bold() | Italic(), _) if out[-1] == "*":
                                 outer = "_"
-                            case (_, Italic() | Underline()) | (Italic() | Strikethrough() | Underline(), _):
+                            case (_, Underline()) | (Italic() | Strikethrough() | Underline(), _):
                                 outer = "*"
                             case _:
                                 outer = "_"
+                    case Underline(Markup([Italic(b)])):
+                        # silly special case
+                        out += f"__*{recur(b)}*__"
+                        continue
                     case Underline():
                         outer = "__"
                     case Strikethrough():
@@ -228,7 +225,12 @@ def format_markup(markup: Markup, *, escapes: bool = True) -> str:
                 bullet = f"{s}. " if s else "- "
                 out += middled("".join(f"{bullet}{indent(recur(b), ' '*len(bullet))[len(bullet):]}" for b in bs))
             case Link(target=l, inner=b, title=t, suppressed=s):
+                l = l.translate(PERCENT_TRANSLATION)
+                if l[-1] in END_PERCENT_TRANSLATION:
+                    l = l[:-1] + END_PERCENT_TRANSLATION[l[-1]]
                 url = f"<{l}>" if s else l
+                if s:
+                    url = f"<{l}>"
                 # odd edge case
                 # if the source string was "https://(a))", this is parsed as the url "https://(a)" followed by a literal ")"
                 # but Link doesn't store the original text of the URL, and if we naively output it in normalized form,
@@ -236,9 +238,10 @@ def format_markup(markup: Markup, *, escapes: bool = True) -> str:
                 # is no longer at the end of the string, it isn't counted as nullifying the ( and this string is parsed as a
                 # single url "https://(a)/)", breaking the round-trip property. so we check for this case and remove the
                 # trailing slash if it occurs.
-                match nxt:
-                    case Text(x) if x.startswith(")"):
-                        url = url.removesuffix("/")
+                elif isinstance(nxt, Text) and nxt.text.startswith(")"):
+                    url = l.removesuffix("/")
+                else:
+                    url = l
                 if t:
                     url += f' "{t}"'
                 out += f"[{format_markup(b, escapes=False)}]({url})" if b else url
