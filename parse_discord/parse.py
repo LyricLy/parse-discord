@@ -219,10 +219,10 @@ class Parser:
 
     def advance(self, start: int, end: int, /) -> None:
         t = self.s[self.i:start]
-        if added_newline := self.ctx.trailing_newline and start == len(self.s):
-            t += "\n"
         self.i = end
         if t:
+            if added_newline := self.ctx.trailing_newline and start == len(self.s):
+                t += "\n"
             if self.ctx.testing_link or self.ctx.is_link:
                 t = regex.sub(r" +(?=\n)", r"\1", t)
             else:

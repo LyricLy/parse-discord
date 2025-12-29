@@ -1,6 +1,6 @@
 """Implementations of {meth}`Markup.normal_form` and {meth}`Markup.__str__`. Not exported."""
 
-from typing import Callable
+from typing import Callable, Literal
 
 import regex
 
@@ -107,6 +107,24 @@ def lines(markup: Markup) -> list[Markup]:
 
     return r
 
+def cover(nodes: list[Node], markup: Markup, style: Callable[[Markup], Node]) -> None:
+    ls = lines(markup)
+    if not ls[-1].nodes:
+        ls.pop()
+    for line in ls:
+        if not line:
+            append_node(nodes, Text("\n"))
+        elif any([isinstance(x, Codeblock) and not one_line(x) for x in line.walk()]):
+            extend_nodes(nodes, line.nodes)
+        else:
+            ns = line.nodes
+            if isinstance(ns[0], Text):
+                ns[:1] = [Text(s := ns[0].text.lstrip())]*bool(s)
+            if isinstance(ns[-1], Text):
+                ns[-1:] = [Text(s := ns[-1].text.rstrip())]*bool(s)
+            append_node(nodes, style(line))
+
+
 def normalize_markup(markup: Markup, *, clean: set[type[Style]]) -> Markup:
     nodes = []
 
@@ -129,29 +147,12 @@ def normalize_markup(markup: Markup, *, clean: set[type[Style]]) -> Markup:
                 node = Link._from_ada_url(u, b, None, s)
             case List(n, xs) if n is not None:
                 node = List(min(max(n, 1), limits.MAX_LIST_INDEX), xs)
-            case Header(inner, l):
-                ls = lines(inner)
-                if not ls[-1].nodes:
-                    ls.pop()
-                for line in ls:
-                    if not line:
-                        append_node(nodes, Text("\n"))
-                    elif any([isinstance(x, Codeblock) and not one_line(x) for x in line.walk()]):
-                        extend_nodes(nodes, line.nodes)
-                    else:
-                        append_node(nodes, Header(line, l))
+            case Header(inner, level):
+                level: Literal[1, 2, 3] = level  # ???
+                cover(nodes, inner, lambda n: Header(n, level))
                 continue
             case Subtext(inner):
-                ls = lines(inner)
-                if not ls[-1].nodes:
-                    ls.pop()
-                for line in ls:
-                    if not line:
-                        append_node(nodes, Text("\n"))
-                    elif any([isinstance(x, Codeblock) and not one_line(x) for x in line.walk()]):
-                        extend_nodes(nodes, line.nodes)
-                    else:
-                        append_node(nodes, Subtext(line))
+                cover(nodes, inner, Subtext)
                 continue
             case node:
                 pass
