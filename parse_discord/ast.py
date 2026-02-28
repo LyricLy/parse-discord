@@ -6,7 +6,7 @@ import copy
 import datetime
 import regex
 from dataclasses import dataclass
-from typing import Self, Iterator, Iterable, Callable, Literal, TYPE_CHECKING
+from typing import Iterator, Iterable, Callable, Literal, TYPE_CHECKING
 
 from .emoji import names_from_emoji
 
@@ -53,7 +53,7 @@ class Node:
             case _:
                 return []
 
-    def map(self, f: Callable[[Markup], Markup], /) -> Self:
+    def map(self, f: Callable[[Markup], Markup], /) -> Node:
         """Apply `f` to each immediate child of this `Node`, forming a new object from the results.
 
         `map` is equivalent to applying `f` to each element of {meth}`inners` and making a `Node` of the same type using the results. For example,
@@ -181,7 +181,7 @@ class Link(Node):
         self.suppressed = suppressed
 
     @classmethod
-    def _from_ada_url(cls, url: URL, inner: Markup | None, title: str | None, suppressed: bool) -> Self:
+    def _from_ada_url(cls, url: URL, inner: Markup | None, title: str | None, suppressed: bool) -> Link:
         us = cls.__new__(cls)
         us._url = url
         us.inner = inner

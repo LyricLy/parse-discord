@@ -21,3 +21,6 @@ dev = [
 [project.urls]
 Repository = "https://github.com/LyricLy/parse-discord"
 Documentation = "https://parse-discord.readthedocs.io/"
+
+[tool.pyright]
+pythonVersion = "3.10"
