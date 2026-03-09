@@ -213,7 +213,7 @@ class Parser:
 
     def append_text(self, s: str, /) -> None:
         if self.nodes and isinstance(self.nodes[-1], Text):
-            self.nodes[-1].text += s
+            self.nodes[-1].content += s
         else:
             self.nodes.append(Text(s))
 
@@ -232,7 +232,7 @@ class Parser:
     def parse(self) -> Markup:
         while n := self.get_match():
             if isinstance(n, Text):
-                self.append_text(n.text)
+                self.append_text(n.content)
             else:
                 self.nodes.append(n)
         self.advance(len(self.s), 0)
@@ -276,7 +276,7 @@ class Parser:
             return InlineCode(r) if not self.ctx.testing_link else Style(self.new_ctx(m).parse(r))
 
         if r := m.groupdict().get("C"):
-            return Codeblock(m.group("Cl") or None, r.strip("\n"))
+            return Codeblock(r.strip("\n"), m.group("Cl") or None)
 
         if r := m.group("ce"):
             return CustomEmoji(int(r), m.group("cen"), bool(m.group("cea")))
@@ -331,7 +331,7 @@ class Parser:
             for bullet, item in zip(bullets, r):
                 t = regex.sub("^ {1,%d}" % len(bullet), "", item, flags=regex.M)
                 items.append(self.new_ctx(m, is_list=True).parse(t))
-            return List(start, items)
+            return List(items, start)
 
         if r := m.groupdict().get("h"):
             title = r.rstrip().rstrip("#").rstrip()

@@ -48,7 +48,7 @@ def append_node(nodes: list[Node], node: Node) -> None:
             nodes.append(node)
         case (b4, List() | Quote() | Subtext() | Header()):
             if isinstance(b4, Text):
-                nodes[-1] = Text(b4.text + "\n")
+                nodes[-1] = Text(b4.content + "\n")
             else:
                 nodes.append(Text("\n"))
             nodes.append(node)
@@ -96,8 +96,8 @@ def lines(markup: Markup) -> list[Markup]:
                 node_lines = [Markup([type(node)(x)]) for x in lines(inner)]
             case Link(_url=u, inner=b, title=t, suppressed=s) if b is not None:
                 node_lines = [Markup([Link._from_ada_url(u, x, t, s)]) for x in lines(b)]
-            case List(n, xs):
-                node_lines = [y for i, x in enumerate(xs) for l in [lines(x)] for y in [Markup([List(None if n is None else n + i, [l[0]])]), *l[1:]]]
+            case List(xs, n):
+                node_lines = [y for i, x in enumerate(xs) for l in [lines(x)] for y in [Markup([List([l[0]], None if n is None else n + i)]), *l[1:]]]
                 node_lines.append(Markup([]))
             case _:
                 node_lines = [Markup([node])]
@@ -119,9 +119,9 @@ def cover(nodes: list[Node], markup: Markup, style: Callable[[Markup], Node]) ->
         else:
             ns = line.nodes
             if isinstance(ns[0], Text):
-                ns[:1] = [Text(s := ns[0].text.lstrip())]*bool(s)
+                ns[:1] = [Text(s := ns[0].content.lstrip())]*bool(s)
             if isinstance(ns[-1], Text):
-                ns[-1:] = [Text(s := ns[-1].text.rstrip())]*bool(s)
+                ns[-1:] = [Text(s := ns[-1].content.rstrip())]*bool(s)
             append_node(nodes, style(line))
 
 
@@ -132,12 +132,12 @@ def normalize_markup(markup: Markup, *, clean: set[type[Style]]) -> Markup:
         match node.map(lambda n, clean=clean | {type(node)} if isinstance(node, Style) else clean: normalize_markup(n, clean=clean)):
             case Text("") | InlineCode("") | Style(Markup([])) | Link(inner=Markup([])) if not isinstance(node, Quote):
                 continue
-            case List(_, xs) if all(not x.nodes for x in xs):
+            case List(xs) if all(not x.nodes for x in xs):
                 continue
-            case Codeblock(l, c):
+            case Codeblock(c, l):
                 if l is not None and not regex.fullmatch(r"[a-zA-Z_\-+.0-9]+", l):
                     l = None
-                node = Codeblock(l, " "*c.startswith("\n") + (c or " ") + " "*c.endswith("\n"))
+                node = Codeblock(" "*c.startswith("\n") + (c or " ") + " "*c.endswith("\n"), l)
             case CustomEmoji(i, n, a):
                 # name doesn't really matter so just mangle it, we can still display if the rest is ok
                 node = CustomEmoji(i, regex.sub(r"[^a-zA-Z_0-9]+", "", n) or "blank", a)
@@ -145,8 +145,8 @@ def normalize_markup(markup: Markup, *, clean: set[type[Style]]) -> Markup:
                 node = Timestamp(min(max(t, limits.MIN_TIMESTAMP), limits.MAX_TIMESTAMP), f if f in ("t", "T", "d", "D", "f", "F", "R") else "f")
             case Link(_url=u, inner=b, title="", suppressed=s) | Link(_url=u, inner=None as b, suppressed=s):
                 node = Link._from_ada_url(u, b, None, s)
-            case List(n, xs) if n is not None:
-                node = List(min(max(n, 1), limits.MAX_LIST_INDEX), xs)
+            case List(xs, n) if n is not None:
+                node = List(xs, min(max(n, 1), limits.MAX_LIST_INDEX))
             case Header(inner, level):
                 level: Literal[1, 2, 3] = level  # ???
                 cover(nodes, inner, lambda n: Header(n, level))
@@ -222,7 +222,7 @@ def format_markup(markup: Markup, *, escapes: bool = True) -> str:
                     case _:
                         assert False
                 out += f"{outer}{recur(b)}{outer}"
-            case List(s, bs):
+            case List(bs, s):
                 bullet = f"{s}. " if s else "- "
                 out += middled("".join(f"{bullet}{indent(recur(b), ' '*len(bullet))[len(bullet):]}" for b in bs))
             case Link(target=l, inner=b, title=t, suppressed=s):
@@ -239,7 +239,7 @@ def format_markup(markup: Markup, *, escapes: bool = True) -> str:
                 # is no longer at the end of the string, it isn't counted as nullifying the ( and this string is parsed as a
                 # single url "https://(a)/)", breaking the round-trip property. so we check for this case and remove the
                 # trailing slash if it occurs.
-                elif isinstance(nxt, Text) and nxt.text.startswith(")"):
+                elif isinstance(nxt, Text) and nxt.content.startswith(")"):
                     url = l.removesuffix("/")
                 else:
                     url = l
@@ -254,7 +254,7 @@ def format_markup(markup: Markup, *, escapes: bool = True) -> str:
                 start = " " * c.lstrip(" ").startswith("`")
                 end = " " * c.rstrip(" ").endswith("`")
                 out += f"{outer}{start}{c}{end}{outer}"
-            case Codeblock(l, c):
+            case Codeblock(c, l):
                 l = l or ""
                 if one_line(node):
                     out += f"```{c}```"

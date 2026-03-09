@@ -41,8 +41,8 @@ class Quotes(unittest.TestCase):
         self.assertEqual(parse("_> foo  _\nbar"), Markup([Italic(Markup([Quote(Markup([Text("foo  ")]))])), Text("\nbar")]))
 
     def test_codeblocks(self):
-        self.assertEqual(parse("> ```a```"), Markup([Quote(Markup([Codeblock(None, "a")]))]))
-        self.assertEqual(parse("> ```\n> a\n> ```"), Markup([Quote(Markup([Codeblock(None, "a")]))]))
+        self.assertEqual(parse("> ```a```"), Markup([Quote(Markup([Codeblock("a", None)]))]))
+        self.assertEqual(parse("> ```\n> a\n> ```"), Markup([Quote(Markup([Codeblock("a", None)]))]))
         self.assertEqual(parse("> ```\na\n```"), Markup([Quote(Markup([Text("```")])), Text("a\n```")]))
 
     def test_strip_passthrough(self):

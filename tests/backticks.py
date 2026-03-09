@@ -26,25 +26,25 @@ class Backticks(unittest.TestCase):
         self.assertEqual(parse(r"`\`"), Markup([InlineCode("\\")]))
 
     def test_block(self):
-        self.assertEqual(parse("```foo```"), Markup([Codeblock(None, "foo")]))
+        self.assertEqual(parse("```foo```"), Markup([Codeblock("foo", None)]))
 
     def test_block_strip(self):
-        self.assertEqual(parse("```\nfoo \n```"), Markup([Codeblock(None, "foo ")]))
+        self.assertEqual(parse("```\nfoo \n```"), Markup([Codeblock("foo ", None)]))
 
     def test_block_lang(self):
-        self.assertEqual(parse("```py\nfoo```"), Markup([Codeblock("py", "foo")]))
+        self.assertEqual(parse("```py\nfoo```"), Markup([Codeblock("foo", "py")]))
 
     def test_false_lang(self):
-        self.assertEqual(parse("```py\n\n```"), Markup([Codeblock(None, "py")]))
+        self.assertEqual(parse("```py\n\n```"), Markup([Codeblock("py", None)]))
 
     def test_one_tick_block(self):
-        self.assertEqual(parse("```````"), Markup([Codeblock(None, "`")]))
+        self.assertEqual(parse("```````"), Markup([Codeblock("`", None)]))
 
     def test_block_that_could_be_inline(self):
-        self.assertEqual(parse("```\n``\n```"), Markup([Codeblock(None, "``")]))
+        self.assertEqual(parse("```\n``\n```"), Markup([Codeblock("``", None)]))
 
     def test_block_that_could_be_different(self):
-        self.assertEqual(parse("```\n```\n```"), Markup([Codeblock(None, "```")]))
+        self.assertEqual(parse("```\n```\n```"), Markup([Codeblock("```", None)]))
 
     def test_false_block(self):
         self.assertEqual(parse("```\n```"), Markup([InlineCode("\n")]))
@@ -53,4 +53,4 @@ class Backticks(unittest.TestCase):
         self.assertEqual(parse("`a` b `c`"), Markup([InlineCode("a"), Text(" b "), InlineCode("c")]))
 
     def test_two_together_block(self):
-        self.assertEqual(parse("```a``` b ```c```"), Markup([Codeblock(None, "a"), Text(" b "), Codeblock(None, "c")]))
+        self.assertEqual(parse("```a``` b ```c```"), Markup([Codeblock("a", None), Text(" b "), Codeblock("c", None)]))

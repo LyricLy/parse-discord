@@ -48,7 +48,7 @@ class Node:
                 return [b]
             case Link(inner=b) if b is not None:
                 return [b]
-            case List(_, bs):
+            case List(bs):
                 return bs[:]
             case _:
                 return []
@@ -69,8 +69,8 @@ class Node:
                 return type(self)(f(b))
             case Link(_url=u, inner=b, title=t, suppressed=s) if b is not None:
                 return type(self)._from_ada_url(u, f(b), t, s)
-            case List(s, bs):
-                return type(self)(s, [f(x) for x in bs])
+            case List(bs, s):
+                return type(self)([f(x) for x in bs], s)
             case _:
                 return copy.copy(self)
 
@@ -81,10 +81,10 @@ class Text(Node):
     :ivar str text: The text.
     """
 
-    text: str
+    content: str
 
     def __repr__(self):
-        return repr(self.text)
+        return repr(self.content)
 
 @dataclass(slots=True)
 class Style(Node):
@@ -132,7 +132,7 @@ class Header(Style):
     level: Literal[1, 2, 3]
 
     def __repr__(self):
-        return f"Header({self.inner!r}, {self.level})"
+        return f"Header({self.inner!r}, level={self.level})"
 
 class Subtext(Style):
     """Subtext (`-# foo`)."""
@@ -147,11 +147,11 @@ class List(Node):
     :ivar list[Markup] items: The items in the list.
     """
 
-    start: int | None
     items: list[Markup]
+    start: int | None
 
     def __repr__(self):
-        return f"List({self.start}, {self.items!r})"
+        return f"List({self.items!r}, start={self.start})"
 
 @dataclass(init=False)
 class Link(Node):
@@ -238,8 +238,8 @@ class Codeblock(Node):
     :ivar str content: The content of the block.
     """
 
-    language: str | None
     content: str
+    language: str | None
 
 @dataclass(slots=True)
 class Mention(Node):

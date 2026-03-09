@@ -42,6 +42,6 @@ class Headers(unittest.TestCase):
         self.assertEqual(parse("#\na"), Markup([Header(Markup([Text("a")]), 1)]))
 
     def test_codeblocks(self):
-        self.assertEqual(parse("# ```a```"), Markup([Header(Markup([Codeblock(None, "a")]), 1)]))
+        self.assertEqual(parse("# ```a```"), Markup([Header(Markup([Codeblock("a", None)]), 1)]))
         self.assertEqual(parse("# ```\na\n```"), Markup([Header(Markup([Text("```")]), 1), Text("a\n```")]))
 
