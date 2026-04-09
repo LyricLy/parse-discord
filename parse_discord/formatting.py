@@ -183,7 +183,7 @@ def format_markup(markup: Markup, *, escapes: bool = True) -> str:
         match node:
             case Text(t):
                 # when inside a [text](url) link (escapes = False), escapes don't work at all, so don't insert them
-                out += regex.sub(r"([*_<:[`\\\p{Emoji_Presentation}]|@(?:here|everyone)|\|\||~~)", r"\\\1", t) if escapes else t
+                out += regex.sub(r"([*-_<:[`\\\p{Emoji_Presentation}]|@(?:here|everyone)|\|\||~~)", r"\\\1", t) if escapes else t
             case Header(b, n):
                 out += middled(f"{'#'*n} {recur(b)} #\n")
             case Subtext(b):
